@@ -1,26 +1,39 @@
 ; Ядро: чистые функции «снимок → что показать». Окна, курсор и экран не трогает.
 ;
-; Снимок:     {hkl, caret: {x, y, w, h} | "", caretDpi}   — координаты в физических пикселях
-; Размещение: {flag, text, x, y, w, h, alpha}              — flag = "" значит картинки нет, показать text
+; Снимок: {hkl,
+;          caret: {x, y, w, h} | "", caretDpi,
+;          mouse: {ibeam, hot: {x, y}, glyph: {x, y, w, h} | ""} | "", mouseDpi}
+;         координаты в физических пикселях; glyph — видимые границы «I» на экране
+; Размещение: {flag, text, x, y, w, h, alpha} — flag = "" значит картинки нет, показать text
 
 class Core {
     ; hasFlag: code -> true/false, есть ли картинка флага
-    ; Возвращает {caret: размещение | ""}
+    ; Возвращает {caret: размещение | "", mouse: размещение | ""}
     static Decide(snap, settings, hasFlag) {
-        result := {caret: ""}
-        cs := settings.caret
-        if !cs.enabled || !IsObject(snap.caret)
-            return result
         ind := Core.MapLayout(snap.hkl, hasFlag)
-        if ind.flag = "" && ind.text = ""
-            return result
-        scale := snap.caretDpi / 96
-        h := Round(cs.size * scale)
-        w := Round(cs.size * 4 / 3 * scale)
-        pos := Core.Place(snap.caret, cs.side, Round(cs.gap * scale), w, h)
-        result.caret := {flag: ind.flag, text: ind.text, x: pos.x, y: pos.y, w: w, h: h,
-            alpha: Round(settings.opacity * 255 / 100)}
-        return result
+        return {
+            caret: Core.PlaceIndicator(ind, snap.caret, settings.caret, snap.caretDpi, settings.opacity),
+            mouse: Core.PlaceIndicator(ind, Core.MouseAnchor(snap.mouse), settings.mouse, snap.mouseDpi, settings.opacity),
+        }
+    }
+
+    ; Якорь флажка у мыши: видимые границы «I», а если их нет — точка hotspot. Не IBEAM — "".
+    static MouseAnchor(m) {
+        if !IsObject(m) || !m.ibeam
+            return ""
+        return IsObject(m.glyph) ? m.glyph : {x: m.hot.x, y: m.hot.y, w: 0, h: 0}
+    }
+
+    ; s — настройки индикатора: {enabled, side, gap, size}
+    static PlaceIndicator(ind, anchor, s, dpi, opacity) {
+        if !s.enabled || !IsObject(anchor) || (ind.flag = "" && ind.text = "")
+            return ""
+        scale := dpi / 96
+        h := Round(s.size * scale)
+        w := Round(s.size * 4 / 3 * scale)
+        pos := Core.Place(anchor, s.side, Round(s.gap * scale), w, h)
+        return {flag: ind.flag, text: ind.text, x: pos.x, y: pos.y, w: w, h: h,
+            alpha: Round(opacity * 255 / 100)}
     }
 
     ; HKL -> {flag: "ru" | "", text: "RU"}

@@ -6,7 +6,18 @@ NoFlags(code) => false
 ; Каретка шириной 2 и высотой 20 в точке (100, 200)
 CaretRect() => {x: 100, y: 200, w: 2, h: 20}
 
-Snap(hkl := 0x04190419, caret?, dpi := 96) => {hkl: hkl, caret: IsSet(caret) ? caret : CaretRect(), caretDpi: dpi}
+Snap(hkl := 0x04190419, caret?, dpi := 96) => {hkl: hkl, caret: IsSet(caret) ? caret : CaretRect(), caretDpi: dpi,
+    mouse: "", mouseDpi: 96}
+
+; Курсор IBEAM: hotspot (300, 400), видимая «I» 9×20 в точке (296, 390)
+GlyphRect() => {x: 296, y: 390, w: 9, h: 20}
+MouseSnap(mouse, dpi := 96) => {hkl: 0x04190419, caret: "", caretDpi: 96, mouse: mouse, mouseDpi: dpi}
+IBeam(glyph?) => {ibeam: true, hot: {x: 300, y: 400}, glyph: IsSet(glyph) ? glyph : GlyphRect()}
+
+DecideMouse(mouse, dpi := 96, settings?) {
+    p := Core.Decide(MouseSnap(mouse, dpi), IsSet(settings) ? settings : DefaultSettings(), AllFlags).mouse
+    return IsObject(p) ? {x: p.x, y: p.y, w: p.w, h: p.h} : p
+}
 
 ; --- маппинг раскладки ---
 
@@ -66,3 +77,39 @@ Test("Decide: раскладка неизвестна — скрыто",
 
 Test("Decide: нет картинки — размещение с текстом",
     (*) => AssertEq(Core.Decide(Snap(), DefaultSettings(), NoFlags).caret.flag, ""))
+
+; --- флажок у мыши ---
+
+Test("мышь: по умолчанию справа снизу от видимой «I», отступ 3",
+    (*) => AssertEq(DecideMouse(IBeam()), {x: 308, y: 413, w: 16, h: 12}))
+
+Test("мышь: границ глифа нет — якорь hotspot",
+    (*) => AssertEq(DecideMouse(IBeam("")), {x: 303, y: 403, w: 16, h: 12}))
+
+Test("мышь: курсор не IBEAM — скрыто",
+    (*) => AssertEq(DecideMouse({ibeam: false, hot: {x: 300, y: 400}, glyph: ""}), ""))
+
+Test("мышь: курсора нет в снимке — скрыто", (*) => AssertEq(DecideMouse(""), ""))
+
+MouseSide(side) {
+    s := DefaultSettings()
+    s.mouse.side := side
+    return DecideMouse(IBeam(), 96, s)
+}
+Test("мышь: снизу — по левому краю «I»", (*) => AssertEq(MouseSide("bottom"), {x: 296, y: 413, w: 16, h: 12}))
+Test("мышь: слева — по центру «I»", (*) => AssertEq(MouseSide("left"), {x: 277, y: 394, w: 16, h: 12}))
+
+Test("мышь: DPI 150%", (*) => AssertEq(DecideMouse(IBeam(), 144), {x: 310, y: 415, w: 24, h: 18}))
+
+MouseDisabled() {
+    s := DefaultSettings()
+    s.mouse.enabled := false
+    return DecideMouse(IBeam(), 96, s)
+}
+Test("мышь: индикатор выключен — скрыто", (*) => AssertEq(MouseDisabled(), ""))
+
+Test("мышь и каретка независимы: каретки нет, флажок у мыши есть",
+    (*) => AssertEq(Core.Decide(MouseSnap(IBeam()), DefaultSettings(), AllFlags).caret, ""))
+
+Test("мышь: тот же флаг, что у каретки (раскладка активного окна)",
+    (*) => AssertEq(Core.Decide(MouseSnap(IBeam()), DefaultSettings(), AllFlags).mouse.flag, "ru"))

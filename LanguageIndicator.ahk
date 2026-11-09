@@ -1,4 +1,4 @@
-; Language Indicator — флажок текущей раскладки у каретки.
+; Language Indicator — флажок текущей раскладки у каретки и у текстового курсора мыши.
 ; Ключ /no-elevate — не поднимать права (для отладки).
 #Requires AutoHotkey v2.0
 #SingleInstance Force
@@ -36,30 +36,54 @@ class App {
     static settings := DefaultSettings()
     static flagFiles := Map()
     static paused := false
+    ; Общий снимок: каретку и раскладку обновляет CaretTick, курсор — MouseTick
+    static snap := {hkl: 0, caret: "", caretDpi: 96, mouse: "", mouseDpi: 96}
 
     static Start() {
         Gdip.Startup()
         OnExit((*) => Gdip.Shutdown())
-        App.overlay := FlagOverlay(A_ScriptDir "\flags")
+        App.caretOverlay := FlagOverlay(A_ScriptDir "\flags")
+        App.mouseOverlay := FlagOverlay(A_ScriptDir "\flags")
         Loop Files A_ScriptDir "\flags\*.png"
             App.flagFiles[SubStr(A_LoopFileName, 1, -4)] := true
-        App.tickFn := ObjBindMethod(App, "Tick")
+        App.caretTickFn := ObjBindMethod(App, "CaretTick")
+        App.mouseTickFn := ObjBindMethod(App, "MouseTick")
         App.hasFlagFn := ObjBindMethod(App, "HasFlag")
         App.BuildTray()
-        SetTimer(App.tickFn, App.settings.pollMs)
+        App.StartTimers()
+    }
+
+    static StartTimers() {
+        SetTimer(App.caretTickFn, App.settings.pollMs)
+        SetTimer(App.mouseTickFn, App.settings.mousePollMs)
+    }
+
+    static StopTimers() {
+        SetTimer(App.caretTickFn, 0)
+        SetTimer(App.mouseTickFn, 0)
     }
 
     static HasFlag(code) => App.flagFiles.Has(code)
 
-    static Tick() {
+    static CaretTick() {
         caret := CaretProbe.Win32()
-        snap := {
-            hkl: LayoutProbe.Foreground(),
-            caret: caret,
-            caretDpi: IsObject(caret) ? MonitorProbe.DpiAt(caret.x, caret.y) : 96,
-        }
-        result := Core.Decide(snap, App.settings, App.hasFlagFn)
-        App.overlay.Update(result.caret)
+        App.snap.hkl := LayoutProbe.Foreground()
+        App.snap.caret := caret
+        App.snap.caretDpi := IsObject(caret) ? MonitorProbe.DpiAt(caret.x, caret.y) : 96
+        App.Apply()
+    }
+
+    static MouseTick() {
+        mouse := CursorProbe.Current()
+        App.snap.mouse := mouse
+        App.snap.mouseDpi := IsObject(mouse) ? MonitorProbe.DpiAt(mouse.hot.x, mouse.hot.y) : 96
+        App.Apply()
+    }
+
+    static Apply() {
+        result := Core.Decide(App.snap, App.settings, App.hasFlagFn)
+        App.caretOverlay.Update(result.caret)
+        App.mouseOverlay.Update(result.mouse)
     }
 
     static BuildTray() {
@@ -74,11 +98,12 @@ class App {
     static TogglePause() {
         App.paused := !App.paused
         if App.paused {
-            SetTimer(App.tickFn, 0)
-            App.overlay.Hide()
+            App.StopTimers()
+            App.caretOverlay.Hide()
+            App.mouseOverlay.Hide()
             A_TrayMenu.Check("Пауза")
         } else {
-            SetTimer(App.tickFn, App.settings.pollMs)
+            App.StartTimers()
             A_TrayMenu.Uncheck("Пауза")
         }
     }
