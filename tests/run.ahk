@@ -20,8 +20,8 @@ Show(v) {
     if !IsObject(v)
         return v is String ? '"' v '"' : String(v)
     parts := []
-    for k, val in v.OwnProps()
-        parts.Push(k ": " Show(val))
+    for k, val in (v is Map ? v : v.OwnProps())
+        parts.Push(Show(k) ": " Show(val))
     out := ""
     for i, p in parts
         out .= (i > 1 ? ", " : "") p
@@ -31,6 +31,7 @@ Show(v) {
 Print(s) => FileAppend(s "`n", "*", "UTF-8-RAW")
 
 #Include CoreTests.ahk
+#Include SettingsTests.ahk
 
 failed := 0
 for t in Tests {

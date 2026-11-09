@@ -10,7 +10,7 @@ class Core {
     ; hasFlag: code -> true/false, есть ли картинка флага
     ; Возвращает {caret: размещение | "", mouse: размещение | ""}
     static Decide(snap, settings, hasFlag) {
-        ind := Core.MapLayout(snap.hkl, hasFlag)
+        ind := Core.MapLayout(snap.hkl, hasFlag, settings.layouts)
         return {
             caret: Core.PlaceIndicator(ind, snap.caret, settings.caret, snap.caretDpi, settings.opacity),
             mouse: Core.PlaceIndicator(ind, Core.MouseAnchor(snap.mouse), settings.mouse, snap.mouseDpi, settings.opacity),
@@ -37,13 +37,23 @@ class Core {
     }
 
     ; HKL -> {flag: "ru" | "", text: "RU"}
-    ; Язык берётся из младшего слова HKL, флаг — по стране локали.
-    static MapLayout(hkl, hasFlag) {
+    ; Сначала переопределение по полному HKL (overrides: Map HKL -> {flag, text},
+    ; пустое поле — автоматически), иначе язык из младшего слова HKL и флаг по стране локали.
+    ; Флаг без картинки превращается в "" — тогда показывается текстовая плашка.
+    static MapLayout(hkl, hasFlag, overrides := Map()) {
         ; LANGID 0 Windows понимает как «язык пользователя по умолчанию» — для нас это «раскладка неизвестна»
         name := (hkl & 0xFFFF) ? Locale.NameFromLangId(hkl & 0xFFFF) : ""
-        country := StrLower(Locale.Country(name))
-        flag := (country ~= "^[a-z]{2}$" && hasFlag(country)) ? country : ""
-        return {flag: flag, text: StrUpper(Locale.Language(name))}
+        flag := StrLower(Locale.Country(name))
+        flag := flag ~= "^[a-z]{2}$" ? flag : ""     ; регион бывает числовым: en-029
+        text := StrUpper(Locale.Language(name))
+        if overrides.Has(hkl) {
+            o := overrides[hkl]
+            flag := o.flag != "" ? o.flag : flag
+            text := o.text != "" ? o.text : text
+        }
+        if !(flag ~= "^[a-z0-9_-]+$" && hasFlag(flag))
+            flag := ""
+        return {flag: flag, text: text}
     }
 
     ; Ставит прямоугольник w×h рядом с якорем a = {x, y, w, h} на расстоянии gap.

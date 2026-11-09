@@ -33,13 +33,18 @@ DllCall("SetThreadDpiAwarenessContext", "ptr", -4, "ptr")
 App.Start()
 
 class App {
-    static settings := DefaultSettings()
+    static settings := ""
     static flagFiles := Map()
     static paused := false
     ; Общий снимок: каретку и раскладку обновляет CaretTick, курсор — MouseTick
     static snap := {hkl: 0, caret: "", caretDpi: 96, mouse: "", mouseDpi: 96}
 
     static Start() {
+        ; Файл настроек создаётся со значениями по умолчанию, чтобы его было что править руками
+        path := A_ScriptDir "\settings.ini"
+        if !FileExist(path)
+            SettingsFile.Save(DefaultSettings(), path)
+        App.settings := SettingsFile.Load(path)
         Gdip.Startup()
         OnExit((*) => Gdip.Shutdown())
         App.caretOverlay := FlagOverlay(A_ScriptDir "\flags")
