@@ -2,8 +2,10 @@
 ;
 ; Снимок: {hkl,
 ;          caret: {x, y, w, h} | "", caretDpi,
-;          mouse: {ibeam, hot: {x, y}, glyph: {x, y, w, h} | ""} | "", mouseDpi}
-;         координаты в физических пикселях; glyph — видимые границы «I» на экране
+;          mouse: {ibeam, hot: {x, y}, glyph: {x, y, w, h} | ""} | "", mouseDpi,
+;          fullscreen: {x, y, w, h} | ""}
+;         координаты в физических пикселях; glyph — видимые границы «I» на экране;
+;         fullscreen — монитор, который целиком занят активным окном без рамки
 ; Размещение: {flag, text, x, y, w, h, alpha} — flag = "" значит картинки нет, показать text
 
 class Core {
@@ -11,10 +13,24 @@ class Core {
     ; Возвращает {caret: размещение | "", mouse: размещение | ""}
     static Decide(snap, settings, hasFlag) {
         ind := Core.MapLayout(snap.hkl, hasFlag, settings.layouts)
-        return {
+        result := {
             caret: Core.PlaceIndicator(ind, snap.caret, settings.caret, snap.caretDpi, settings.opacity),
             mouse: Core.PlaceIndicator(ind, Core.MouseAnchor(snap.mouse), settings.mouse, snap.mouseDpi, settings.opacity),
         }
+        ; Полноэкранное окно (игра, видео) прячет флажки на своём мониторе, но не на соседнем
+        if settings.hideFullscreen && IsObject(snap.fullscreen) {
+            for name in ["caret", "mouse"]
+                if Core.CenterInside(result.%name%, snap.fullscreen)
+                    result.%name% := ""
+        }
+        return result
+    }
+
+    static CenterInside(p, r) {
+        if !IsObject(p)
+            return false
+        cx := p.x + p.w / 2, cy := p.y + p.h / 2
+        return cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h
     }
 
     ; Якорь флажка у мыши: видимые границы «I», а если их нет — точка hotspot. Не IBEAM — "".

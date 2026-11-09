@@ -36,8 +36,8 @@ class App {
     static settings := ""
     static flagFiles := Map()
     static paused := false
-    ; Общий снимок: каретку и раскладку обновляет CaretTick, курсор — MouseTick
-    static snap := {hkl: 0, caret: "", caretDpi: 96, mouse: "", mouseDpi: 96}
+    ; Общий снимок: каретку, раскладку и полноэкранность обновляет CaretTick, курсор — MouseTick
+    static snap := {hkl: 0, caret: "", caretDpi: 96, mouse: "", mouseDpi: 96, fullscreen: ""}
 
     static Start() {
         ; Файл настроек создаётся со значениями по умолчанию, чтобы его было что править руками
@@ -75,6 +75,7 @@ class App {
         App.snap.hkl := LayoutProbe.Foreground()
         App.snap.caret := caret
         App.snap.caretDpi := IsObject(caret) ? MonitorProbe.DpiAt(caret.x, caret.y) : 96
+        App.snap.fullscreen := App.settings.hideFullscreen ? FullscreenProbe.Foreground() : ""
         App.Apply()
     }
 

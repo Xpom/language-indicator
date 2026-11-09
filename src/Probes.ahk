@@ -311,6 +311,36 @@ class CursorProbe {
     }
 }
 
+class FullscreenProbe {
+    ; Монитор {x, y, w, h}, который целиком занят активным окном без заголовка (игра, видео,
+    ; браузер по F11), или "". Развёрнутое обычное окно с заголовком не считается.
+    static Foreground() {
+        hwnd := DllCall("GetForegroundWindow", "ptr")
+        if !hwnd
+            return ""
+        try {
+            cls := WinGetClass(hwnd)
+            style := WinGetStyle(hwnd)
+        } catch
+            return ""
+        if cls = "Progman" || cls = "WorkerW" || cls = "Shell_TrayWnd"   ; рабочий стол и панель задач
+            return ""
+        if (style & 0x00C00000) = 0x00C00000                               ; WS_CAPTION
+            return ""
+        wr := Buffer(16)
+        DllCall("GetWindowRect", "ptr", hwnd, "ptr", wr)
+        hmon := DllCall("MonitorFromWindow", "ptr", hwnd, "uint", 2, "ptr")
+        mi := Buffer(40, 0)                                                ; MONITORINFO
+        NumPut("uint", 40, mi)
+        if !DllCall("GetMonitorInfo", "ptr", hmon, "ptr", mi)
+            return ""
+        ml := NumGet(mi, 4, "int"), mt := NumGet(mi, 8, "int"), mr := NumGet(mi, 12, "int"), mb := NumGet(mi, 16, "int")
+        if NumGet(wr, 0, "int") <= ml && NumGet(wr, 4, "int") <= mt && NumGet(wr, 8, "int") >= mr && NumGet(wr, 12, "int") >= mb
+            return {x: ml, y: mt, w: mr - ml, h: mb - mt}
+        return ""
+    }
+}
+
 class MonitorProbe {
     ; DPI монитора, на котором точка (x, y); 96 = 100%
     static DpiAt(x, y) {

@@ -7,11 +7,11 @@ NoFlags(code) => false
 CaretRect() => {x: 100, y: 200, w: 2, h: 20}
 
 Snap(hkl := 0x04190419, caret?, dpi := 96) => {hkl: hkl, caret: IsSet(caret) ? caret : CaretRect(), caretDpi: dpi,
-    mouse: "", mouseDpi: 96}
+    mouse: "", mouseDpi: 96, fullscreen: ""}
 
 ; Курсор IBEAM: hotspot (300, 400), видимая «I» 9×20 в точке (296, 390)
 GlyphRect() => {x: 296, y: 390, w: 9, h: 20}
-MouseSnap(mouse, dpi := 96) => {hkl: 0x04190419, caret: "", caretDpi: 96, mouse: mouse, mouseDpi: dpi}
+MouseSnap(mouse, dpi := 96) => {hkl: 0x04190419, caret: "", caretDpi: 96, mouse: mouse, mouseDpi: dpi, fullscreen: ""}
 IBeam(glyph?) => {ibeam: true, hot: {x: 300, y: 400}, glyph: IsSet(glyph) ? glyph : GlyphRect()}
 
 DecideMouse(mouse, dpi := 96, settings?) {
@@ -113,3 +113,28 @@ Test("мышь и каретка независимы: каретки нет, ф
 
 Test("мышь: тот же флаг, что у каретки (раскладка активного окна)",
     (*) => AssertEq(Core.Decide(MouseSnap(IBeam()), DefaultSettings(), AllFlags).mouse.flag, "ru"))
+
+; --- полноэкранный режим ---
+
+; Каретка (100, 200) и мышь (300, 400) на мониторе 0..1920×0..1080; второй монитор справа
+Monitor1() => {x: 0, y: 0, w: 1920, h: 1080}
+Monitor2() => {x: 1920, y: 0, w: 1920, h: 1080}
+
+DecideFullscreen(fs, hide := true) {
+    sn := Snap()
+    sn.mouse := IBeam()
+    sn.fullscreen := fs
+    s := DefaultSettings()
+    s.hideFullscreen := hide
+    r := Core.Decide(sn, s, AllFlags)
+    return {caret: IsObject(r.caret), mouse: IsObject(r.mouse)}
+}
+
+Test("полноэкранный: окно на мониторе флажков — оба скрыты",
+    (*) => AssertEq(DecideFullscreen(Monitor1()), {caret: false, mouse: false}))
+Test("полноэкранный: окно на другом мониторе — флажки видны",
+    (*) => AssertEq(DecideFullscreen(Monitor2()), {caret: true, mouse: true}))
+Test("полноэкранный: опция выключена — флажки видны",
+    (*) => AssertEq(DecideFullscreen(Monitor1(), false), {caret: true, mouse: true}))
+Test("полноэкранного окна нет — флажки видны",
+    (*) => AssertEq(DecideFullscreen(""), {caret: true, mouse: true}))

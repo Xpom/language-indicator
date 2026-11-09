@@ -3,6 +3,7 @@
 DefaultSettings() {
     return {
         opacity: 85,        ; %
+        hideFullscreen: true,   ; прятать флажки на мониторе полноэкранного окна
         pollMs: 50,         ; опрос каретки и раскладки
         mousePollMs: 15,    ; опрос курсора: флажок у мыши должен поспевать за ней
         caret: {
@@ -23,7 +24,7 @@ DefaultSettings() {
 }
 
 ; settings.ini (UTF-16, чтобы годились любые символы в кодах):
-;   [General]  opacity
+;   [General]  opacity, hideFullscreen
 ;   [Caret]    enabled, side, gap, size
 ;   [Mouse]    enabled, side, gap, size
 ;   [Advanced] pollMs, mousePollMs, caretWin32, caretMsaa, caretUia
@@ -37,6 +38,7 @@ class SettingsFile {
         if !FileExist(path)
             return s
         s.opacity := SettingsFile.Num(path, "General", "opacity", s.opacity, 10, 100)
+        s.hideFullscreen := SettingsFile.Bool(path, "General", "hideFullscreen", s.hideFullscreen)
         s.pollMs := SettingsFile.Num(path, "Advanced", "pollMs", s.pollMs, 15, 1000)
         s.mousePollMs := SettingsFile.Num(path, "Advanced", "mousePollMs", s.mousePollMs, 10, 200)
         for section, ind in Map("Caret", s.caret, "Mouse", s.mouse) {
@@ -58,6 +60,7 @@ class SettingsFile {
             FileDelete(path)
         FileAppend("", path, "UTF-16")
         IniWrite(s.opacity, path, "General", "opacity")
+        IniWrite(s.hideFullscreen ? 1 : 0, path, "General", "hideFullscreen")
         for section, ind in Map("Caret", s.caret, "Mouse", s.mouse) {
             IniWrite(ind.enabled ? 1 : 0, path, section, "enabled")
             IniWrite(ind.side, path, section, "side")
