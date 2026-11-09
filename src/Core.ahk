@@ -40,16 +40,25 @@ class Core {
         return IsObject(m.glyph) ? m.glyph : {x: m.hot.x, y: m.hot.y, w: 0, h: 0}
     }
 
-    ; s — настройки индикатора: {enabled, side, gap, size}
+    ; s — настройки индикатора: {enabled, side, gap, size} и, у каретки, режим размера
     static PlaceIndicator(ind, anchor, s, dpi, opacity) {
         if !s.enabled || !IsObject(anchor) || (ind.flag = "" && ind.text = "")
             return ""
         scale := dpi / 96
-        h := Round(s.size * scale)
-        w := Round(s.size * 4 / 3 * scale)
+        size := Core.FlagSize(s, anchor.h / scale)
+        h := Round(size * scale)
+        w := Round(size * 4 / 3 * scale)
         pos := Core.Place(anchor, s.side, Round(s.gap * scale), w, h)
         return {flag: ind.flag, text: ind.text, x: pos.x, y: pos.y, w: w, h: h,
             alpha: Round(opacity * 255 / 100)}
+    }
+
+    ; Высота флажка в логических пикселях: фиксированная или sizeRatio % от высоты якоря
+    ; (anchorH — тоже логические пиксели), в пределах sizeMin..sizeMax
+    static FlagSize(s, anchorH) {
+        if !s.HasOwnProp("sizeMode") || s.sizeMode != "caret"
+            return s.size
+        return Max(s.sizeMin, Min(s.sizeMax, Round(anchorH * s.sizeRatio / 100)))
     }
 
     ; HKL -> {flag: "ru" | "", text: "RU"}

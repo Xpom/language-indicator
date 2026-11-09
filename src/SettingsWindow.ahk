@@ -20,13 +20,14 @@ class SettingsWindow {
         fullscreen: "Прятать флажки в полноэкранных приложениях (игры, видео)",
         autostart: "Запускать вместе с Windows",
         ok: "Сохранить",
+        advanced: "Дополнительно: раскладки, поиск каретки, опрос, размер по высоте каретки",
         cancel: "Отменить изменения",
         autostartFailed: "Не удалось изменить автозапуск: для этого программа должна работать с правами администратора.",
     }
 
     static Glyphs := {
         caret: 0xE8AC, mouse: 0xE962, size: 0xE8E9, gap: 0xE799, opacity: 0xE793,
-        fullscreen: 0xE740, autostart: 0xE7E8, ok: 0xE73E, cancel: 0xE711, flag: 0xE7C1,
+        fullscreen: 0xE740, autostart: 0xE7E8, ok: 0xE73E, cancel: 0xE711, flag: 0xE7C1, advanced: 0xE713,
     }
 
     ; Сетка 3×3: сторона -> [строка, столбец]; центр — образец каретки или курсора
@@ -76,8 +77,11 @@ class SettingsWindow {
         SettingsWindow.Toggle(g, "fullscreen", 250, y, s.hideFullscreen, v => s.hideFullscreen := v, T.fullscreen)
         SettingsWindow.autostartBox := SettingsWindow.Toggle(g, "autostart", 340, y, Autostart.IsEnabled(), v => 0, T.autostart)
 
-        ; ✓ и ✕
+        ; Шестерёнка, ✓ и ✕
         g.SetFont("s12", "Segoe MDL2 Assets")
+        adv := g.AddButton("x16 y334 w52 h34", Chr(SettingsWindow.Glyphs.advanced))
+        adv.OnEvent("Click", (*) => AdvancedWindow.Open(SettingsWindow.app, SettingsWindow.gui))
+        SettingsWindow.tips[adv.Hwnd] := T.advanced
         ok := g.AddButton("x324 y334 w52 h34 Default", Chr(SettingsWindow.Glyphs.ok))
         ok.OnEvent("Click", (*) => SettingsWindow.Ok())
         SettingsWindow.tips[ok.Hwnd] := T.ok
@@ -210,7 +214,7 @@ class SettingsWindow {
     ; Прямоугольник образца на экране, пока окно настроек активно, иначе ""
     static PreviewAnchor(kind) {
         g := SettingsWindow.gui
-        if !g || !WinActive("ahk_id " g.Hwnd)
+        if !g || !(WinActive("ahk_id " g.Hwnd) || AdvancedWindow.gui && WinActive("ahk_id " AdvancedWindow.gui.Hwnd))
             return ""
         r := Buffer(16)
         DllCall("GetWindowRect", "ptr", SettingsWindow.anchors[kind].Hwnd, "ptr", r)
@@ -231,13 +235,17 @@ class SettingsWindow {
         app := SettingsWindow.app
         app.settings := SettingsFile.Load(app.settingsPath)
         SettingsWindow.Close()
+        app.StartTimers()
     }
 
     static Close() {
+        ; Ссылку обнуляем до Destroy: тик таймера между строками не должен увидеть уничтоженное окно
+        g := SettingsWindow.gui
+        SettingsWindow.gui := ""
+        AdvancedWindow.Close()
         OnMessage(0x200, SettingsWindow.mouseMoveFn, 0)
         ToolTip()
         SettingsWindow.tipHwnd := 0
-        SettingsWindow.gui.Destroy()
-        SettingsWindow.gui := ""
+        g.Destroy()
     }
 }

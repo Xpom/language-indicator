@@ -138,3 +138,22 @@ Test("полноэкранный: опция выключена — флажки
     (*) => AssertEq(DecideFullscreen(Monitor1(), false), {caret: true, mouse: true}))
 Test("полноэкранного окна нет — флажки видны",
     (*) => AssertEq(DecideFullscreen(""), {caret: true, mouse: true}))
+
+; --- размер по высоте каретки ---
+
+; Каретка высотой h логических пикселей, режим «по высоте»: 70%, пределы 8..32
+CaretSized(h, dpi := 96, mode := "caret") {
+    s := DefaultSettings()
+    s.caret.sizeMode := mode
+    scale := dpi / 96
+    p := Core.Decide({hkl: 0x04190419, caret: {x: 100, y: 200, w: 2, h: Round(h * scale)}, caretDpi: dpi,
+        mouse: IBeam(), mouseDpi: dpi, fullscreen: ""}, s, AllFlags)
+    return {caret: p.caret.h, mouse: p.mouse.h}
+}
+
+Test("размер по каретке: 70% от высоты 20 = 14", (*) => AssertEq(CaretSized(20).caret, 14))
+Test("размер по каретке: высокая каретка упирается в максимум 32", (*) => AssertEq(CaretSized(60).caret, 32))
+Test("размер по каретке: низкая каретка упирается в минимум 8", (*) => AssertEq(CaretSized(5).caret, 8))
+Test("размер по каретке: DPI 150% — считается в логических пикселях", (*) => AssertEq(CaretSized(20, 144).caret, 21))
+Test("размер по каретке: флажок у мыши не меняется", (*) => AssertEq(CaretSized(60).mouse, 12))
+Test("размер фиксированный: высота каретки не влияет", (*) => AssertEq(CaretSized(60, 96, "fixed").caret, 12))

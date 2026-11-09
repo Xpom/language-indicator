@@ -342,11 +342,71 @@ class FullscreenProbe {
 }
 
 class MonitorProbe {
+    ; Номер монитора (для MonitorGet*), на котором точка (x, y); 1, если ни на каком
+    static IndexAt(x, y) {
+        Loop MonitorGetCount() {
+            MonitorGet(A_Index, &l, &t, &r, &b)
+            if x >= l && x < r && y >= t && y < b
+                return A_Index
+        }
+        return 1
+    }
+
     ; DPI монитора, на котором точка (x, y); 96 = 100%
     static DpiAt(x, y) {
         hmon := DllCall("MonitorFromPoint", "int64", (y << 32) | (x & 0xFFFFFFFF), "uint", 2, "ptr")
         if DllCall("shcore\GetDpiForMonitor", "ptr", hmon, "int", 0, "uint*", &dpiX := 0, "uint*", &dpiY := 0) != 0
             return 96
         return dpiX
+    }
+}
+
+class LayoutList {
+    static regRoot := "HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layouts"
+
+    ; Установленные раскладки: [{hkl, name}], name — «Русский (Россия) — Русская»
+    static Installed() {
+        n := DllCall("GetKeyboardLayoutList", "int", 0, "ptr", 0, "int")
+        buf := Buffer(n * A_PtrSize, 0)
+        n := DllCall("GetKeyboardLayoutList", "int", n, "ptr", buf, "int")
+        out := []
+        Loop n {
+            hkl := NumGet(buf, (A_Index - 1) * A_PtrSize, "ptr") & 0xFFFFFFFF
+            out.Push({hkl: hkl, name: LayoutList.Name(hkl)})
+        }
+        return out
+    }
+
+    static Name(hkl) {
+        lang := Locale.DisplayName(Locale.NameFromLangId(hkl & 0xFFFF))
+        kbd := LayoutList.KeyboardName(hkl)
+        return kbd != "" && kbd != lang ? lang " — " kbd : lang
+    }
+
+    ; Название раскладки клавиатуры из реестра: локализованное, если есть, иначе английское.
+    ; Старшее слово HKL — либо KLID (00000409), либо 0xFnnn, где nnn — «Layout Id» варианта.
+    static KeyboardName(hkl) {
+        hi := (hkl >> 16) & 0xFFFF
+        klid := ""
+        if (hi & 0xF000) = 0xF000 {
+            id := Format("{:04x}", hi & 0x0FFF)
+            Loop Reg LayoutList.regRoot, "K" {
+                try if RegRead(A_LoopRegKey "\" A_LoopRegName, "Layout Id") = id {
+                    klid := A_LoopRegName
+                    break
+                }
+            }
+        } else
+            klid := Format("{:08X}", hi)
+        if klid = ""
+            return ""
+        key := LayoutList.regRoot "\" klid
+        try {
+            buf := Buffer(512, 0)
+            if DllCall("shlwapi\SHLoadIndirectString", "str", RegRead(key, "Layout Display Name"), "ptr", buf, "uint", 256, "ptr", 0) = 0
+                return StrGet(buf)
+        }
+        try return RegRead(key, "Layout Text")
+        return ""
     }
 }

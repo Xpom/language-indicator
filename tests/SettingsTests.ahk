@@ -51,6 +51,10 @@ ChangedSettings() {
     s.caret.gap := 7
     s.caret.size := 20
     s.caret.methods.uia := false
+    s.caret.sizeMode := "caret"
+    s.caret.sizeRatio := 90
+    s.caret.sizeMin := 10
+    s.caret.sizeMax := 24
     s.mouse.side := "left"
     s.mouse.size := 16
     s.layouts[0x04090409] := {flag: "gb", text: "EN"}

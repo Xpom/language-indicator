@@ -12,6 +12,7 @@ Persistent
 #Include src\Overlay.ahk
 #Include src\Autostart.ahk
 #Include src\SettingsWindow.ahk
+#Include src\AdvancedWindow.ahk
 
 HasArg(name) {
     for a in A_Args

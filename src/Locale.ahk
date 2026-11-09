@@ -1,6 +1,7 @@
 ; Справочник локалей Windows. Ответы зависят только от входа, поэтому годится для тестов.
 
 class Locale {
+    static LOCALE_SLOCALIZEDDISPLAYNAME := 0x2
     static LOCALE_SISO639LANGNAME := 0x59
     static LOCALE_SISO3166CTRYNAME := 0x5A
 
@@ -17,11 +18,14 @@ class Locale {
     ; "ru-RU" -> "ru"
     static Language(name) => Locale.Info(name, Locale.LOCALE_SISO639LANGNAME)
 
+    ; "ru-RU" -> "Русский (Россия)" — на языке интерфейса Windows
+    static DisplayName(name) => Locale.Info(name, Locale.LOCALE_SLOCALIZEDDISPLAYNAME)
+
     static Info(name, type) {
         if name = ""
             return ""
-        buf := Buffer(20 * 2, 0)
-        n := DllCall("GetLocaleInfoEx", "str", name, "uint", type, "ptr", buf, "int", 20, "int")
+        buf := Buffer(128 * 2, 0)
+        n := DllCall("GetLocaleInfoEx", "str", name, "uint", type, "ptr", buf, "int", 128, "int")
         return n ? StrGet(buf) : ""
     }
 }

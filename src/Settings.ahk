@@ -12,6 +12,10 @@ DefaultSettings() {
             gap: 3,
             size: 12,       ; высота флажка; ширина = высота * 4/3
             methods: {win32: true, msaa: true, uia: true},   ; способы поиска каретки, по порядку
+            sizeMode: "fixed",  ; fixed — size; caret — sizeRatio % от высоты каретки в пределах sizeMin..sizeMax
+            sizeRatio: 70,
+            sizeMin: 8,
+            sizeMax: 32,
         },
         mouse: {
             enabled: true,
@@ -27,7 +31,8 @@ DefaultSettings() {
 ;   [General]  opacity, hideFullscreen
 ;   [Caret]    enabled, side, gap, size
 ;   [Mouse]    enabled, side, gap, size
-;   [Advanced] pollMs, mousePollMs, caretWin32, caretMsaa, caretUia
+;   [Advanced] pollMs, mousePollMs, caretWin32, caretMsaa, caretUia,
+;              caretSizeMode, caretSizeRatio, caretSizeMin, caretSizeMax
 ;   [Layouts]  04090409=gb|EN — полный HKL в hex = флаг|код
 ; Отсутствующее или негодное значение заменяется значением по умолчанию.
 class SettingsFile {
@@ -51,6 +56,12 @@ class SettingsFile {
         m.win32 := SettingsFile.Bool(path, "Advanced", "caretWin32", m.win32)
         m.msaa := SettingsFile.Bool(path, "Advanced", "caretMsaa", m.msaa)
         m.uia := SettingsFile.Bool(path, "Advanced", "caretUia", m.uia)
+        c := s.caret
+        mode := SettingsFile.Read(path, "Advanced", "caretSizeMode")
+        c.sizeMode := mode = "caret" || mode = "fixed" ? StrLower(mode) : c.sizeMode
+        c.sizeRatio := SettingsFile.Num(path, "Advanced", "caretSizeRatio", c.sizeRatio, 20, 200)
+        c.sizeMin := SettingsFile.Num(path, "Advanced", "caretSizeMin", c.sizeMin, 6, 64)
+        c.sizeMax := Max(c.sizeMin, SettingsFile.Num(path, "Advanced", "caretSizeMax", c.sizeMax, 6, 64))
         s.layouts := SettingsFile.LoadLayouts(path)
         return s
     }
@@ -72,6 +83,10 @@ class SettingsFile {
         IniWrite(s.caret.methods.win32 ? 1 : 0, path, "Advanced", "caretWin32")
         IniWrite(s.caret.methods.msaa ? 1 : 0, path, "Advanced", "caretMsaa")
         IniWrite(s.caret.methods.uia ? 1 : 0, path, "Advanced", "caretUia")
+        IniWrite(s.caret.sizeMode, path, "Advanced", "caretSizeMode")
+        IniWrite(s.caret.sizeRatio, path, "Advanced", "caretSizeRatio")
+        IniWrite(s.caret.sizeMin, path, "Advanced", "caretSizeMin")
+        IniWrite(s.caret.sizeMax, path, "Advanced", "caretSizeMax")
         for hkl, o in s.layouts
             IniWrite(o.flag "|" o.text, path, "Layouts", Format("{:08X}", hkl))
     }
