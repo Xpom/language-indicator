@@ -15,6 +15,13 @@ AutoHotkey v2 стоит в `C:\Program Files\AutoHotkey\v2`.
 MSYS_NO_PATHCONV=1 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" /ErrorStdOut tests/run.ahk | cat   # тесты, код выхода 0 = всё прошло
 ```
 
+Останавливать индикатор — штатно, как пункт «Выход» в трее (WM_COMMAND 65405 скрытому окну AHK). `Stop-Process`/`taskkill /F` оставляют в трее значок-призрак до наведения мыши.
+
+```ahk
+DetectHiddenWindows(true)
+PostMessage(0x111, 65405, 0, , "LanguageIndicator.ahk ahk_class AutoHotkey")
+```
+
 В Git Bash ключи вида `/ErrorStdOut` без `MSYS_NO_PATHCONV=1` превращаются в путь, и AHK повисает с диалогом ошибки.
 
 Ловушки AHK v2:
