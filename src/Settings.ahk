@@ -10,6 +10,7 @@ DefaultSettings() {
             side: "bottom", ; см. Core.Place
             gap: 3,
             size: 12,       ; высота флажка; ширина = высота * 4/3
+            methods: {win32: true, msaa: true, uia: true},   ; способы поиска каретки, по порядку
         },
         mouse: {
             enabled: true,

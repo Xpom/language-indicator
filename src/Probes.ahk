@@ -12,17 +12,53 @@ class LayoutProbe {
     }
 }
 
+; Владеющая ссылка на COM-интерфейс: Release при уничтожении. Годится для ComCall.
+class ComPtr {
+    __New(p) => this.Ptr := p
+    __Delete() => this.Ptr && ObjRelease(this.Ptr)
+}
+
+Guid(s) {
+    b := Buffer(16)
+    DllCall("ole32\CLSIDFromString", "str", s, "ptr", b)
+    return b
+}
+
 class CaretProbe {
-    ; Каретка Win32 активного окна: {x, y, w, h} на экране или ""
-    static Win32() {
+    ; Каретка активного окна цепочкой Win32 → MSAA → UIA: {x, y, w, h} на экране или "".
+    ; methods — {win32, msaa, uia}: какие способы включены.
+    static Find(methods) {
+        if methods.win32 && IsObject(c := CaretProbe.Win32())
+            return c
+        if methods.msaa && IsObject(c := CaretProbe.Msaa())
+            return c
+        if methods.uia && IsObject(c := CaretProbe.Uia())
+            return c
+        return ""
+    }
+
+    ; GUITHREADINFO потока активного окна: cbSize, flags, 6 HWND, RECT rcCaret — или ""
+    static GuiThreadInfo() {
         hwnd := DllCall("GetForegroundWindow", "ptr")
         if !hwnd
             return ""
         tid := DllCall("GetWindowThreadProcessId", "ptr", hwnd, "ptr", 0, "uint")
-        ; GUITHREADINFO: cbSize, flags, 6 HWND (последний — hwndCaret), RECT rcCaret
         gti := Buffer(8 + 6 * A_PtrSize + 16, 0)
         NumPut("uint", gti.Size, gti)
-        if !DllCall("GetGUIThreadInfo", "uint", tid, "ptr", gti)
+        return DllCall("GetGUIThreadInfo", "uint", tid, "ptr", gti) ? gti : ""
+    }
+
+    ; Окно с фокусом ввода, а если его не узнать — активное окно
+    static FocusWindow() {
+        gti := CaretProbe.GuiThreadInfo()
+        focus := IsObject(gti) ? NumGet(gti, 8 + A_PtrSize, "ptr") : 0
+        return focus ? focus : DllCall("GetForegroundWindow", "ptr")
+    }
+
+    ; Системная каретка (Win32): Блокнот, WordPad, Проводник, диалоги
+    static Win32() {
+        gti := CaretProbe.GuiThreadInfo()
+        if !IsObject(gti)
             return ""
         hwndCaret := NumGet(gti, 8 + 5 * A_PtrSize, "ptr")
         if !hwndCaret
@@ -37,6 +73,138 @@ class CaretProbe {
         if !DllCall("ClientToScreen", "ptr", hwndCaret, "ptr", pt)
             return ""
         return {x: NumGet(pt, 0, "int"), y: NumGet(pt, 4, "int"), w: Max(right - left, 1), h: bottom - top}
+    }
+
+    ; Каретка через MSAA (OBJID_CARET): Chromium и Electron отдают её для экранных луп
+    static Msaa() {
+        static IID_IAccessible := Guid("{618736E0-3C3D-11CF-810C-00AA00389B71}")
+        ; DllCall("oleacc\...") выгружает DLL сразу после вызова, а объект живёт на её коде — держим загруженной
+        static oleacc := DllCall("LoadLibrary", "str", "oleacc", "ptr")
+        hwnd := CaretProbe.FocusWindow()
+        if !hwnd
+            return ""
+        p := 0
+        if DllCall("oleacc\AccessibleObjectFromWindow", "ptr", hwnd, "uint", 0xFFFFFFF8, "ptr", IID_IAccessible, "ptr*", &p) != 0 || !p
+            return ""
+        acc := ComPtr(p)
+        child := Buffer(24, 0)          ; VARIANT VT_I4 = CHILDID_SELF
+        NumPut("ushort", 3, child)
+        l := t := w := h := 0
+        try ComCall(22, acc, "int*", &l, "int*", &t, "int*", &w, "int*", &h, "ptr", child)   ; accLocation
+        catch
+            return ""
+        return h > 0 ? {x: l, y: t, w: Max(w, 1), h: h} : ""
+    }
+
+    ; Каретка через UI Automation: элемент с фокусом → TextPattern2.GetCaretRange
+    ; (или TextPattern.GetSelection) → прямоугольник диапазона.
+    static Uia() {
+        uia := CaretProbe.UiaClient()
+        if !uia
+            return ""
+        try {
+            ComCall(8, uia, "ptr*", &p := 0)            ; GetFocusedElement
+            if !p
+                return ""
+            range := CaretProbe.UiaCaretRange(ComPtr(p))
+            return IsObject(range) ? CaretProbe.UiaCaretRect(range) : ""
+        } catch
+            return ""
+    }
+
+    static uiaInstance := ""
+
+    static UiaClient() {
+        if CaretProbe.uiaInstance = "" {
+            client := 0
+            try client := ComObject("{e22ad333-b25f-460c-83d0-0581107395c9}", "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}")  ; CUIAutomation8
+            catch
+                try client := ComObject("{ff48dba4-60ef-4201-aa87-54103eef594e}", "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}")  ; CUIAutomation
+            CaretProbe.uiaInstance := client
+            ScreenReaderFlag.Enable()
+        }
+        return CaretProbe.uiaInstance
+    }
+
+    static UiaCaretRange(el) {
+        static IID_TextPattern2 := Guid("{506a921a-fcc9-409f-b23b-37eb74106872}")
+        static IID_TextPattern := Guid("{32eba289-3583-42c9-9c59-3b6d9a1e9b6a}")
+        p := 0
+        try ComCall(14, el, "int", 10024, "ptr", IID_TextPattern2, "ptr*", &p)   ; GetCurrentPatternAs
+        if p {
+            tp := ComPtr(p)
+            ComCall(10, tp, "int*", &active := 0, "ptr*", &r := 0)               ; GetCaretRange
+            if r
+                return active ? ComPtr(r) : (ObjRelease(r), "")
+        }
+        p := 0
+        try ComCall(14, el, "int", 10014, "ptr", IID_TextPattern, "ptr*", &p)
+        if !p
+            return ""
+        tp := ComPtr(p)
+        ComCall(5, tp, "ptr*", &a := 0)                                           ; GetSelection
+        if !a
+            return ""
+        ranges := ComPtr(a)
+        ComCall(3, ranges, "int*", &n := 0)                                       ; get_Length
+        if !n
+            return ""
+        ComCall(4, ranges, "int", 0, "ptr*", &r := 0)                             ; GetElement
+        return r ? ComPtr(r) : ""
+    }
+
+    ; У пустого диапазона каретки прямоугольников обычно нет — тогда расширяем
+    ; на символ вправо и берём его левый край, а в конце текста — влево и правый край.
+    static UiaCaretRect(range) {
+        rects := CaretProbe.UiaRects(range)
+        if rects.Length
+            return {x: rects[1].x, y: rects[1].y, w: 1, h: rects[1].h}
+        for dir in [1, -1] {
+            ComCall(3, range, "ptr*", &c := 0)                                    ; Clone
+            probe := ComPtr(c)
+            ; MoveEndpointByUnit(End/Start, TextUnit_Character, ±1)
+            ComCall(14, probe, "int", dir = 1 ? 1 : 0, "int", 0, "int", dir, "int*", &moved := 0)
+            if !moved
+                continue
+            rects := CaretProbe.UiaRects(probe)
+            if rects.Length {
+                r := dir = 1 ? rects[1] : rects[rects.Length]
+                return {x: dir = 1 ? r.x : r.x + r.w, y: r.y, w: 1, h: r.h}
+            }
+        }
+        return ""
+    }
+
+    ; GetBoundingRectangles: SAFEARRAY из double по четыре (left, top, width, height)
+    static UiaRects(range) {
+        out := []
+        ComCall(10, range, "ptr*", &psa := 0)
+        if !psa
+            return out
+        DllCall("oleaut32\SafeArrayGetUBound", "ptr", psa, "uint", 1, "int*", &ub := 0)
+        DllCall("oleaut32\SafeArrayAccessData", "ptr", psa, "ptr*", &data := 0)
+        Loop (ub + 1) // 4 {
+            o := (A_Index - 1) * 32
+            r := {x: Round(NumGet(data, o, "double")), y: Round(NumGet(data, o + 8, "double")),
+                w: Round(NumGet(data, o + 16, "double")), h: Round(NumGet(data, o + 24, "double"))}
+            if r.h > 0
+                out.Push(r)
+        }
+        DllCall("oleaut32\SafeArrayUnaccessData", "ptr", psa)
+        DllCall("oleaut32\SafeArrayDestroy", "ptr", psa)
+        return out
+    }
+}
+
+; Флаг «работает программа чтения экрана»: без него Chromium и Electron не включают
+; доступность и UIA не видит их текст. Ставим один раз, на выходе возвращаем как было.
+class ScreenReaderFlag {
+    static Enable() {
+        DllCall("SystemParametersInfo", "uint", 0x46, "uint", 0, "int*", &was := 0, "uint", 0)   ; SPI_GETSCREENREADER
+        if was
+            return
+        DllCall("SystemParametersInfo", "uint", 0x47, "uint", 1, "ptr", 0, "uint", 2)   ; SPI_SETSCREENREADER, SPIF_SENDCHANGE
+        OnExit((*) => DllCall("SystemParametersInfo", "uint", 0x47, "uint", 0, "ptr", 0, "uint", 2))
     }
 }
 

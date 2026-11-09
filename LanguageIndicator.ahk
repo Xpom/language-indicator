@@ -66,7 +66,7 @@ class App {
     static HasFlag(code) => App.flagFiles.Has(code)
 
     static CaretTick() {
-        caret := CaretProbe.Win32()
+        caret := CaretProbe.Find(App.settings.caret.methods)
         App.snap.hkl := LayoutProbe.Foreground()
         App.snap.caret := caret
         App.snap.caretDpi := IsObject(caret) ? MonitorProbe.DpiAt(caret.x, caret.y) : 96
