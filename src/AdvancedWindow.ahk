@@ -217,9 +217,13 @@ class AdvancedWindow {
             return
         if !AdvancedWindow.pickerImages {
             il := DllCall("comctl32\ImageList_Create", "int", 48, "int", 36, "uint", 0x20, "int", 300, "int", 16, "ptr")
-            Loop Files A_ScriptDir "\flags\*.png" {
-                AdvancedWindow.AddImage(il, SubStr(A_LoopFileName, 1, -4), 48, 36)
-                AdvancedWindow.pickerCodes.Push(SubStr(A_LoopFileName, 1, -4))
+            ; По коду, а не в порядке файлов: там «gb-eng.png» раньше «gb.png» (дефис меньше точки)
+            codes := ""
+            Loop Files A_ScriptDir "\flags\*.png"
+                codes .= SubStr(A_LoopFileName, 1, -4) "`n"
+            for code in StrSplit(Sort(RTrim(codes, "`n")), "`n") {
+                AdvancedWindow.AddImage(il, code, 48, 36)
+                AdvancedWindow.pickerCodes.Push(code)
             }
             AdvancedWindow.pickerImages := il
         }
