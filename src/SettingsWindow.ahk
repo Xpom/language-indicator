@@ -214,10 +214,16 @@ class SettingsWindow {
     ; Прямоугольник образца на экране, пока окно настроек активно, иначе ""
     static PreviewAnchor(kind) {
         g := SettingsWindow.gui
-        if !g || !(WinActive("ahk_id " g.Hwnd) || AdvancedWindow.gui && WinActive("ahk_id " AdvancedWindow.gui.Hwnd))
+        adv := AdvancedWindow.gui
+        ; Окно могут уничтожить между тиками — тогда .Hwnd бросает «Gui has no window»
+        try {
+            if !g || !(WinActive("ahk_id " g.Hwnd) || adv && WinActive("ahk_id " adv.Hwnd))
+                return ""
+            anchor := SettingsWindow.anchors[kind].Hwnd
+        } catch
             return ""
         r := Buffer(16)
-        DllCall("GetWindowRect", "ptr", SettingsWindow.anchors[kind].Hwnd, "ptr", r)
+        DllCall("GetWindowRect", "ptr", anchor, "ptr", r)
         return {x: NumGet(r, 0, "int"), y: NumGet(r, 4, "int"),
             w: NumGet(r, 8, "int") - NumGet(r, 0, "int"), h: NumGet(r, 12, "int") - NumGet(r, 4, "int")}
     }
