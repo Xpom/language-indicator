@@ -1,5 +1,5 @@
 ; Language Indicator — флажок текущей раскладки у каретки и у текстового курсора мыши.
-; Ключ /no-elevate — не поднимать права (для отладки).
+; Ключи: /no-elevate — не поднимать права (для отладки), /settings — сразу открыть настройки.
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 Persistent
@@ -10,6 +10,8 @@ Persistent
 #Include src\Probes.ahk
 #Include src\Gdip.ahk
 #Include src\Overlay.ahk
+#Include src\Autostart.ahk
+#Include src\SettingsWindow.ahk
 
 HasArg(name) {
     for a in A_Args
@@ -34,6 +36,7 @@ App.Start()
 
 class App {
     static settings := ""
+    static settingsPath := A_ScriptDir "\settings.ini"
     static flagFiles := Map()
     static paused := false
     ; Общий снимок: каретку, раскладку и полноэкранность обновляет CaretTick, курсор — MouseTick
@@ -41,10 +44,9 @@ class App {
 
     static Start() {
         ; Файл настроек создаётся со значениями по умолчанию, чтобы его было что править руками
-        path := A_ScriptDir "\settings.ini"
-        if !FileExist(path)
-            SettingsFile.Save(DefaultSettings(), path)
-        App.settings := SettingsFile.Load(path)
+        if !FileExist(App.settingsPath)
+            SettingsFile.Save(DefaultSettings(), App.settingsPath)
+        App.settings := SettingsFile.Load(App.settingsPath)
         Gdip.Startup()
         OnExit((*) => Gdip.Shutdown())
         App.caretOverlay := FlagOverlay(A_ScriptDir "\flags")
@@ -56,6 +58,8 @@ class App {
         App.hasFlagFn := ObjBindMethod(App, "HasFlag")
         App.BuildTray()
         App.StartTimers()
+        if HasArg("/settings")
+            SettingsWindow.Open(App)
     }
 
     static StartTimers() {
@@ -71,7 +75,9 @@ class App {
     static HasFlag(code) => App.flagFiles.Has(code)
 
     static CaretTick() {
-        caret := CaretProbe.Find(App.settings.caret.methods)
+        ; Пока открыто окно настроек, флажок показывается у образца каретки — живой предпросмотр
+        preview := SettingsWindow.PreviewAnchor("caret")
+        caret := IsObject(preview) ? preview : CaretProbe.Find(App.settings.caret.methods)
         App.snap.hkl := LayoutProbe.Foreground()
         App.snap.caret := caret
         App.snap.caretDpi := IsObject(caret) ? MonitorProbe.DpiAt(caret.x, caret.y) : 96
@@ -80,7 +86,10 @@ class App {
     }
 
     static MouseTick() {
-        mouse := CursorProbe.Current()
+        preview := SettingsWindow.PreviewAnchor("mouse")
+        mouse := IsObject(preview)
+            ? {ibeam: true, hot: {x: preview.x, y: preview.y}, glyph: preview}
+            : CursorProbe.Current()
         App.snap.mouse := mouse
         App.snap.mouseDpi := IsObject(mouse) ? MonitorProbe.DpiAt(mouse.hot.x, mouse.hot.y) : 96
         App.Apply()
@@ -96,6 +105,9 @@ class App {
         A_IconTip := "Language Indicator"
         m := A_TrayMenu
         m.Delete()
+        m.Add("Настройки", (*) => SettingsWindow.Open(App))
+        m.Default := "Настройки"         ; двойной клик по иконке
+        m.Add()
         m.Add("Пауза", (*) => App.TogglePause())
         m.Add("Перезапуск", (*) => Reload())
         m.Add("Выход", (*) => ExitApp())

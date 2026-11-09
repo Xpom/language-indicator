@@ -23,9 +23,10 @@ class FlagOverlay {
         if look != this.look {
             this.Render(p)
             this.look := look
+            DllCall("SetWindowPos", "ptr", this.hwnd, "ptr", -1, "int", 0, "int", 0, "int", 0, "int", 0, "uint", 0x13)   ; поверх, без сдвига
         } else if p.x != this.x || p.y != this.y {
-            ; SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
-            DllCall("SetWindowPos", "ptr", this.hwnd, "ptr", 0, "int", p.x, "int", p.y, "int", 0, "int", 0, "uint", 0x15)
+            ; HWND_TOPMOST, SWP_NOSIZE | SWP_NOACTIVATE: заодно поднимаем над другими окнами «поверх всех»
+            DllCall("SetWindowPos", "ptr", this.hwnd, "ptr", -1, "int", p.x, "int", p.y, "int", 0, "int", 0, "uint", 0x11)
         }
         this.x := p.x, this.y := p.y
         if !this.visible {
