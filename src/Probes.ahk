@@ -99,6 +99,12 @@ class CaretProbe {
         try ComCall(22, acc, "int*", &l, "int*", &t, "int*", &w, "int*", &h, "ptr", child)   ; accLocation
         catch
             return ""
+        ; Chromium после потери фокуса полем оставляет прежние координаты, но помечает
+        ; каретку невидимой (STATE_SYSTEM_INVISIBLE) — тогда каретки нет
+        state := Buffer(24, 0)
+        try ComCall(14, acc, "ptr", child, "ptr", state)                                     ; get_accState
+        if NumGet(state, 0, "ushort") = 3 && NumGet(state, 8, "int") & 0x8000
+            return ""
         return h > 0 ? {x: l, y: t, w: Max(w, 1), h: h} : ""
     }
 
@@ -112,7 +118,14 @@ class CaretProbe {
             ComCall(8, uia, "ptr*", &p := 0)            ; GetFocusedElement
             if !p
                 return ""
-            range := CaretProbe.UiaCaretRange(ComPtr(p))
+            el := ComPtr(p)
+            ; Нередактируемый текст (страница в браузере после клика по ней) тоже отдаёт
+            ; «каретку» — место выделения. Вводить туда нельзя, флажок не нужен.
+            ro := Buffer(24, 0)
+            ComCall(10, el, "int", 30046, "ptr", ro)    ; GetCurrentPropertyValue(ValueIsReadOnly)
+            if NumGet(ro, 0, "ushort") = 11 && NumGet(ro, 8, "short")
+                return ""
+            range := CaretProbe.UiaCaretRange(el)
             return IsObject(range) ? CaretProbe.UiaCaretRect(range) : ""
         } catch
             return ""
