@@ -14,8 +14,6 @@ Persistent
 #Include src\Autostart.ahk
 #Include src\Json.ahk
 #Include src\SettingsPage.ahk
-#Include src\SettingsWindow.ahk
-#Include src\AdvancedWindow.ahk
 
 HasArg(name) {
     for a in A_Args
@@ -80,9 +78,7 @@ class App {
     static HasFlag(code) => App.flagFiles.Has(code)
 
     static CaretTick() {
-        ; Пока открыто окно настроек, флажок показывается у образца каретки — живой предпросмотр
-        preview := SettingsWindow.PreviewAnchor("caret")
-        caret := IsObject(preview) ? preview : CaretProbe.Find(App.settings.caret.methods)
+        caret := CaretProbe.Find(App.settings.caret.methods)
         App.snap.hkl := LayoutProbe.Foreground()
         SettingsPage.LayoutTick(App.snap.hkl)
         App.snap.caret := caret
@@ -92,10 +88,7 @@ class App {
     }
 
     static MouseTick() {
-        preview := SettingsWindow.PreviewAnchor("mouse")
-        mouse := IsObject(preview)
-            ? {ibeam: true, hot: {x: preview.x, y: preview.y}, glyph: preview}
-            : CursorProbe.Current()
+        mouse := CursorProbe.Current()
         App.snap.mouse := mouse
         App.snap.mouseDpi := IsObject(mouse) ? MonitorProbe.DpiAt(mouse.hot.x, mouse.hot.y) : 96
         App.Apply()
