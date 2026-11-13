@@ -184,3 +184,17 @@ svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width:
 .sel-font { width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--field); color: var(--ink); font-size: 12px; }
 .fsr { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .fsr .track { flex: 1; }
+
+/* Выпадающий список языка окна */
+.dd { position: relative; }
+.dd-btn { display: flex; align-items: center; gap: 8px; min-width: 150px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); cursor: pointer; }
+.dd-btn:hover { border-color: var(--accent); }
+.dd-btn .sp { flex: 1; }
+.dd-btn .ico { font-size: 9px; color: var(--muted); }
+.dd-list { position: absolute; right: 0; top: calc(100% + 4px); width: 220px; max-height: 300px; overflow: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 4px; z-index: 5; }
+.dd-list .hd { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 6px 8px 3px; }
+.dd-list .it { display: flex; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.dd-list .it:hover { background: var(--field); }
+.dd-list .it.sel { color: var(--accent); font-weight: 600; }
+.dd-list .it small { color: var(--muted); margin-left: auto; }
+.dd-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }

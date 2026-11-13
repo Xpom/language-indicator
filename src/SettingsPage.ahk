@@ -12,7 +12,8 @@
 ;   layout: {flag, text}                  — текущая раскладка, для предпросмотра
 ;   layouts: [{hkl, name, auto, flag, text}] — установленные раскладки: auto — флаг и код без
 ;                                           переопределения, flag и text — переопределение
-;   flags: [код]}                         — все картинки в flags
+;   flags: [код],                         — все картинки в flags
+;   systemLang: "ru"}                     — язык интерфейса Windows (для uiLang = auto)
 ; Каждое изменение сразу применяется к app.settings и с короткой задержкой пишется в ini.
 
 #Include ..\lib\WebView2\WebView2.ahk
@@ -147,6 +148,7 @@ class SettingsPage {
             layout: Core.MapLayout(app.snap.hkl, app.hasFlagFn, s.layouts),
             layouts: layouts,
             flags: flags,
+            systemLang: StrLower(Locale.Language(Locale.NameFromLangId(DllCall("GetUserDefaultUILanguage", "ushort")))),
         }))
     }
 

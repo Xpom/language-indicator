@@ -3,6 +3,7 @@
 DefaultSettings() {
     return {
         opacity: 85,        ; %
+        uiLang: "auto",     ; язык окна настроек: auto — язык Windows, если есть перевод, иначе английский
         cornerRadius: 2,    ; скругление углов флага и плашки при высоте 12; растёт вместе с размером
         code: {             ; плашка с кодом языка
             bg: "#3c4043",  ; фон: #rrggbb или none — без фона, белый текст с тёмной обводкой
@@ -36,7 +37,7 @@ DefaultSettings() {
 }
 
 ; settings.ini (UTF-16, чтобы годились любые символы в кодах):
-;   [General]  opacity, hideFullscreen, cornerRadius
+;   [General]  opacity, hideFullscreen, cornerRadius, uiLang
 ;   [Code]     bg, font, scale
 ;   [Caret]    enabled, show, side, gap, size
 ;   [Mouse]    enabled, show, side, gap, size
@@ -45,6 +46,8 @@ DefaultSettings() {
 ;   [Layouts]  04090409=gb|EN — полный HKL в hex = флаг|код
 ; Отсутствующее или негодное значение заменяется значением по умолчанию.
 class SettingsFile {
+    ; Языки окна настроек: десять самых распространённых в мире
+    static uiLangs := ["auto", "en", "zh", "hi", "es", "fr", "ar", "bn", "pt", "ru", "ur"]
     static sides := ["bottom", "top", "left", "right", "bottom-right", "bottom-left", "top-right", "top-left"]
 
     ; Все простые настройки: путь в объекте настроек, секция и ключ ini, вид значения.
@@ -55,6 +58,7 @@ class SettingsFile {
         ["opacity",             "General",  "opacity",        "num", 10, 100],
         ["hideFullscreen",      "General",  "hideFullscreen", "bool"],
         ["cornerRadius",        "General",  "cornerRadius",   "num", 0, 6],
+        ["uiLang",              "General",  "uiLang",         "enum", SettingsFile.uiLangs],
         ["code.bg",             "Code",     "bg",             "color"],
         ["code.font",           "Code",     "font",           "font"],
         ["code.scale",          "Code",     "scale",          "num", 40, 90],

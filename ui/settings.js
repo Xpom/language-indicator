@@ -7,7 +7,7 @@ const host = window.chrome && window.chrome.webview;
 const DEMO = {
   type: "state", autostart: 1, layout: { flag: "ru", text: "RU" },
   settings: {
-    opacity: 85, hideFullscreen: 1, pollMs: 50, mousePollMs: 15, cornerRadius: 2,
+    opacity: 85, hideFullscreen: 1, pollMs: 50, mousePollMs: 15, cornerRadius: 2, uiLang: "auto",
     code: { bg: "#3c4043", font: "Segoe UI", scale: 62 },
     caret: { enabled: 1, show: "flag", side: "bottom", gap: 3, size: 12, methods: { win32: 1, msaa: 1, uia: 1 }, sizeMode: "fixed", sizeRatio: 70, sizeMin: 8, sizeMax: 32 },
     mouse: { enabled: 1, show: "flag", side: "bottom-right", gap: 3, size: 12 },
@@ -18,20 +18,52 @@ const DEMO = {
     { hkl: "04090409", name: "Английский (США)", auto: { flag: "us", text: "EN" }, flag: "gb", text: "" },
   ],
   flags: ["by", "de", "eu", "fr", "gb", "gb-eng", "kz", "ru", "ua", "us"],
+  systemLang: "ru",
 };
 
+// Тексты окна по языкам. Переведены русский и английский; остальные языки показывают английский
 const T = {
-  title: "Индикатор раскладки", more: "Дополнительно", minimize: "Свернуть", close: "Закрыть",
-  caret: "Каретка", mouse: "Мышь", shown: "Показывать", hidden: "Скрыто",
-  gap: "Отступ", auto: "Автозапуск", autoOn: "С Windows", autoOff: "Выключен", opacity: "Непрозрачность",
-  showFlag: "Показывать флаг", showCode: "Показывать код языка",
-  sizeCaret: "Размер флажка у каретки", sizeMouse: "Размер флажка у мыши",
-  radius: "Скругление углов", flagT: "Флажок", codeT: "Код", customColor: "Свой цвет", noBg: "Без фона", codeSize: "Размер букв",
-  general: "Общие", full: "Прятать в полноэкранных", layouts: "Раскладки", methods: "Искать", poll: "Опрос, мс",
-  pick: "Нажмите, чтобы выбрать другой флаг", reset: "Как обычно", none: "Без флага", search: "Страна или код…", nothing: "Ничего не нашлось",
-  sides: { "top-left": "Сверху слева", top: "Сверху", "top-right": "Сверху справа", left: "Слева", right: "Справа", "bottom-left": "Снизу слева", bottom: "Снизу", "bottom-right": "Снизу справа" },
+  ru: {
+    title: "Индикатор раскладки", sample: "Привет", more: "Дополнительно", minimize: "Свернуть", close: "Закрыть",
+    caret: "Каретка", mouse: "Мышь", shown: "Показывать", hidden: "Скрыто",
+    gap: "Отступ", auto: "Автозапуск", autoOn: "С Windows", autoOff: "Выключен", opacity: "Непрозрачность",
+    showFlag: "Показывать флаг", showCode: "Показывать код языка",
+    sizeCaret: "Размер флажка у каретки", sizeMouse: "Размер флажка у мыши",
+    radius: "Скругление углов", flagT: "Флажок", codeT: "Код", customColor: "Свой цвет", noBg: "Без фона", codeSize: "Размер букв",
+    general: "Общие", uiLang: "Язык окна", here: "На этом компьютере", other: "Другие",
+    full: "Прятать в полноэкранных", layouts: "Раскладки", methods: "Искать", poll: "Опрос, мс",
+    pick: "Нажмите, чтобы выбрать другой флаг", reset: "Как обычно", none: "Без флага", search: "Страна или код…", nothing: "Ничего не нашлось",
+    sides: { "top-left": "Сверху слева", top: "Сверху", "top-right": "Сверху справа", left: "Слева", right: "Справа", "bottom-left": "Снизу слева", bottom: "Снизу", "bottom-right": "Снизу справа" },
+  },
+  en: {
+    title: "Language Indicator", sample: "Hello", more: "Advanced", minimize: "Minimize", close: "Close",
+    caret: "Caret", mouse: "Mouse", shown: "Shown", hidden: "Hidden",
+    gap: "Gap", auto: "Autostart", autoOn: "With Windows", autoOff: "Off", opacity: "Opacity",
+    showFlag: "Show the flag", showCode: "Show the language code",
+    sizeCaret: "Flag size at the caret", sizeMouse: "Flag size at the mouse",
+    radius: "Corner radius", flagT: "Flag", codeT: "Code", customColor: "Custom color", noBg: "No background", codeSize: "Letter size",
+    general: "General", uiLang: "Window language", here: "On this PC", other: "Other",
+    full: "Hide in fullscreen", layouts: "Layouts", methods: "Sources", poll: "Poll, ms",
+    pick: "Click to pick another flag", reset: "Default", none: "No flag", search: "Country or code…", nothing: "Nothing found",
+    sides: { "top-left": "Top left", top: "Top", "top-right": "Top right", left: "Left", right: "Right", "bottom-left": "Bottom left", bottom: "Bottom", "bottom-right": "Bottom right" },
+  },
 };
-const t = k => T[k];
+// Десять самых распространённых языков мира: код, название на самом языке
+const UI_LANGS = [["en", "English"], ["zh", "中文"], ["hi", "हिन्दी"], ["es", "Español"], ["fr", "Français"], ["ar", "العربية"], ["bn", "বাংলা"], ["pt", "Português"], ["ru", "Русский"], ["ur", "اردو"]];
+// Язык окна: выбранный, а для auto — язык Windows, если для него есть перевод, иначе английский
+function lang() {
+  const ui = state.settings.uiLang;
+  if (ui && ui !== "auto") return ui;
+  return T[state.systemLang] ? state.systemLang : "en";
+}
+const t = k => (T[lang()] || T.en)[k];
+// Название языка на языке окна
+function langName(code) {
+  try {
+    const n = new Intl.DisplayNames([lang()], { type: "language" }).of(code);
+    return n.charAt(0).toLocaleUpperCase(lang()) + n.slice(1);
+  } catch { return code; }
+}
 
 // Свои значки: читаются и на белом, и на цветном
 const I = {
@@ -41,7 +73,7 @@ const I = {
   ibeam: `<svg width="9" height="20" viewBox="0 0 9 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1h2.5a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H1M8 1H5.5a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1H8"/></svg>`,
 };
 const G = { flag: "", gear: "", min: "", close: "", gap: "", auto: "", opacity: "" ,
-  full: "\uE740", poll: "\uE916", reset: "\uE777", down: "\uE70D", search: "\uE721", x: "\uE711", tick: "\uE73E", code: "\uE8D2" };
+  full: "\uE740", poll: "\uE916", reset: "\uE777", down: "\uE70D", search: "\uE721", x: "\uE711", tick: "\uE73E", code: "\uE8D2", lang: "\uE774" };
 const SIDES = ["top-left", "top", "top-right", "left", null, "right", "bottom-left", "bottom", "bottom-right"];
 // Пределы контролов (в ini пределы шире — см. SettingsFile.Fields)
 const SIZE = [8, 32], GAP = [0, 12], OPACITY = [10, 100], POLL = [15, 200], MOUSE_POLL = [10, 100], RADIUS = [0, 6], CODE_SCALE = [40, 90];
@@ -117,7 +149,7 @@ function putFlag(box, ind, a) {
   box.appendChild(f);
 }
 function preview(pv) {
-  pv.innerHTML = `<div class="line">Привет<span class="caret"></span></div><span class="ibeam">${I.ibeam}</span>`;
+  pv.innerHTML = `<div class="line">${t("sample")}<span class="caret"></span></div><span class="ibeam">${I.ibeam}</span>`;
   const m = pv.querySelector(".ibeam");
   m.style.left = (pv.clientWidth - 46) + "px";
   m.style.top = Math.max(14, pv.clientHeight - 48) + "px";
@@ -193,6 +225,7 @@ function Side() {
       <span class="ico reset ${l.flag || l.text ? "" : "none"}" data-reset="${l.hkl}" title="${t("reset")}">${G.reset}</span></div>`;
   return `<div class="adv">
     ${sec("general", `<span class="ico">${G.gear}</span>`, t("general"), `
+      <div class="r"><span class="ico">${G.lang}</span>${t("uiLang")}<span class="sp"></span>${LangDropdown()}</div>
       <div class="r"><span class="ico">${G.flag}</span>${t("radius")}${track("rad", s.cornerRadius, RADIUS)}<span class="v">${s.cornerRadius}px</span></div>
       <div class="r"><span class="ico">${G.full}</span>${t("full")}<span class="sp"></span><div class="toggle ${s.hideFullscreen ? "on" : ""}" id="hf"></div></div>`)}
     ${Pair()}
@@ -219,7 +252,19 @@ function Pair() {
     </div></div>`;
 }
 
+// Язык окна: десять самых распространённых языков; языки раскладок компьютера — сверху
+let ddOpen = false;
+function LangDropdown() {
+  const cur = lang(), mine = new Set(state.layouts.map(l => l.auto.text.toLowerCase()));
+  const item = ([code, name]) => `<div class="it ${code === cur ? "sel" : ""}" data-lang="${code}">${name}<small>${langName(code)}</small></div>`;
+  const here = UI_LANGS.filter(l => mine.has(l[0])), rest = UI_LANGS.filter(l => !mine.has(l[0]));
+  return `<div class="dd"><div class="dd-btn" id="dd">${UI_LANGS.find(l => l[0] === cur)[1]}<span class="sp"></span><span class="ico">${G.down}</span></div>
+    ${ddOpen ? `<div class="dd-list">${here.length ? `<div class="hd">${t("here")}</div>${here.map(item).join("")}<hr>` : ""}<div class="hd">${t("other")}</div>${rest.map(item).join("")}</div>` : ""}</div>`;
+}
+
 function bindSide(app) {
+  app.querySelector("#dd").onclick = () => { ddOpen = !ddOpen; render(); };
+  app.querySelectorAll("[data-lang]").forEach(el => el.onclick = e => { e.stopPropagation(); ddOpen = false; set("uiLang", el.dataset.lang); });
   drag("rad", "x", RADIUS, "cornerRadius");
   drag("fs", "x", CODE_SCALE, "code.scale");
   app.querySelectorAll("[data-bg]").forEach(el => el.onclick = () => set("code.bg", el.dataset.bg));
@@ -248,14 +293,15 @@ const EXTRA = {
   en: { arab: "Arab League", asean: "ASEAN", cefta: "CEFTA", eac: "East African Community", "es-ct": "Catalonia", "es-ga": "Galicia", "es-pv": "Basque Country", eu: "European Union", "gb-eng": "England", "gb-nir": "Northern Ireland", "gb-sct": "Scotland", "gb-wls": "Wales", pc: "Pacific Community", "sh-ac": "Ascension Island", "sh-hl": "Saint Helena", "sh-ta": "Tristan da Cunha", un: "United Nations", xx: "Blank flag" },
 };
 function countryName(code, lang) {
-  if (EXTRA[lang] && EXTRA[lang][code]) return EXTRA[lang][code];
+  const extra = EXTRA[lang] || EXTRA.en;
+  if (extra[code]) return extra[code];
   try { return new Intl.DisplayNames([lang], { type: "region" }).of(code.toUpperCase()); } catch { return code; }
 }
 
 function openGallery(l) {
-  const lang = "ru", cur = layoutFlag(l);
+  const ui = lang(), cur = layoutFlag(l);
   const names = c => [c, countryName(c, "ru"), countryName(c, "en")].join(" ").toLowerCase();
-  const sorted = [...state.flags].sort((a, b) => countryName(a, lang).localeCompare(countryName(b, lang), lang));
+  const sorted = [...state.flags].sort((a, b) => countryName(a, ui).localeCompare(countryName(b, ui), ui));
   const ov = document.getElementById("overlay");
   ov.innerHTML = `<div class="gal-back"><div class="gal">
     <div class="gal-head"><span class="who">${flagImg(cur)}${l.name}</span>
@@ -263,7 +309,7 @@ function openGallery(l) {
       <button class="ico" id="gx">${G.x}</button></div>
     <div class="gal-grid" id="gg">
       <div class="cell ${cur === "-" ? "sel" : ""}" data-f="-" data-n="${t("none").toLowerCase()} none"><span class="nof"></span><b>—</b><span>${t("none")}</span></div>
-      ${sorted.map(c => `<div class="cell ${c === cur ? "sel" : ""}" data-f="${c}" data-n="${names(c)}" title="${countryName(c, lang)}"><img loading="lazy" src="${flagUrl(c)}"><b>${c}</b><span>${countryName(c, lang)}</span></div>`).join("")}
+      ${sorted.map(c => `<div class="cell ${c === cur ? "sel" : ""}" data-f="${c}" data-n="${names(c)}" title="${countryName(c, ui)}"><img loading="lazy" src="${flagUrl(c)}"><b>${c}</b><span>${countryName(c, ui)}</span></div>`).join("")}
       <div class="gal-empty" hidden>${t("nothing")}</div>
     </div></div></div>`;
   const q = ov.querySelector("#gq"), cells = [...ov.querySelectorAll(".cell")], empty = ov.querySelector(".gal-empty");
@@ -290,6 +336,7 @@ function openGallery(l) {
 
 function render() {
   const app = document.getElementById("app");
+  document.documentElement.lang = lang();
   app.classList.toggle("wide", !!adv);
   app.innerHTML = `${Titlebar()}<div class="cols"><div id="main">${Main()}</div>${adv ? `<div id="side">${Side()}</div>` : ""}</div>`;
   bindMain(app);

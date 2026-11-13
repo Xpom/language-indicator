@@ -58,6 +58,7 @@ ChangedSettings() {
     s.mouse.side := "left"
     s.mouse.show := "code"
     s.cornerRadius := 0
+    s.uiLang := "en"
     s.code.bg := "none"
     s.code.font := "Bahnschrift"
     s.code.scale := 80
@@ -130,6 +131,8 @@ Test("Set: цвет фона кода в любом регистре", (*) => As
 Test("Set: фон кода — none", (*) => AssertEq(SetAndShow("code.bg", "None"), '1: "none"'))
 Test("Set: негодный цвет отброшен", (*) => AssertEq(SetAndShow("code.bg", "red"), '0: "#3c4043"'))
 Test("Set: негодный шрифт отброшен", (*) => AssertEq(SetAndShow("code.font", "Arial;rm"), '0: "Segoe UI"'))
+Test("Set: язык окна из списка", (*) => AssertEq(SetAndShow("uiLang", "ES"), '1: "es"'))
+Test("Set: язык окна не из списка отброшен", (*) => AssertEq(SetAndShow("uiLang", "xx"), '0: "auto"'))
 Test("Set: show — только flag или code", (*) => AssertEq(SetAndShow("caret.show", "emoji"), '0: "flag"'))
 Test("Set: неизвестный ключ", (*) => AssertEq(SettingsFile.Set(DefaultSettings(), "layouts", "x"), false))
 Test("Set: максимум не меньше минимума", (*) => (s := DefaultSettings(), SettingsFile.Set(s, "caret.sizeMin", 40),
