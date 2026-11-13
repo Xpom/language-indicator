@@ -126,7 +126,7 @@ class CaretProbe {
             if NumGet(ro, 0, "ushort") = 11 && NumGet(ro, 8, "short")
                 return ""
             range := CaretProbe.UiaCaretRange(el)
-            return IsObject(range) ? CaretProbe.UiaCaretRect(range) : ""
+            return IsObject(range) ? CaretProbe.UiaCaretRect(range, el) : ""
         } catch
             return ""
     }
@@ -174,10 +174,12 @@ class CaretProbe {
 
     ; У пустого диапазона каретки прямоугольников обычно нет — тогда расширяем
     ; на символ вправо и берём его левый край, а в конце текста — влево и правый край.
-    static UiaCaretRect(range) {
+    ; Если расширить не на что, поле пустое — каретка в его начале (так у Qt Quick).
+    static UiaCaretRect(range, el) {
         rects := CaretProbe.UiaRects(range)
         if rects.Length
             return {x: rects[1].x, y: rects[1].y, w: 1, h: rects[1].h}
+        empty := true
         for dir in [1, -1] {
             ComCall(3, range, "ptr*", &c := 0)                                    ; Clone
             probe := ComPtr(c)
@@ -185,13 +187,25 @@ class CaretProbe {
             ComCall(14, probe, "int", dir = 1 ? 1 : 0, "int", 0, "int", dir, "int*", &moved := 0)
             if !moved
                 continue
+            empty := false
             rects := CaretProbe.UiaRects(probe)
             if rects.Length {
                 r := dir = 1 ? rects[1] : rects[rects.Length]
                 return {x: dir = 1 ? r.x : r.x + r.w, y: r.y, w: 1, h: r.h}
             }
         }
-        return ""
+        return empty ? CaretProbe.UiaFieldStart(el) : ""
+    }
+
+    ; Начало пустого поля: левый верхний угол элемента, высота — не больше строки
+    static UiaFieldStart(el) {
+        r := Buffer(16, 0)
+        ComCall(43, el, "ptr", r)                                                 ; get_CurrentBoundingRectangle
+        left := NumGet(r, 0, "int"), top := NumGet(r, 4, "int"), bottom := NumGet(r, 12, "int")
+        if bottom <= top
+            return ""
+        lineH := Round(24 * MonitorProbe.DpiAt(left, top) / 96)
+        return {x: left, y: top, w: 1, h: Min(bottom - top, lineH)}
     }
 
     ; GetBoundingRectangles: SAFEARRAY из double по четыре (left, top, width, height)
