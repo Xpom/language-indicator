@@ -3,6 +3,12 @@
 DefaultSettings() {
     return {
         opacity: 85,        ; %
+        cornerRadius: 2,    ; скругление углов флага и плашки при высоте 12; растёт вместе с размером
+        code: {             ; плашка с кодом языка
+            bg: "#3c4043",  ; фон: #rrggbb или none — без фона, белый текст с тёмной обводкой
+            font: "Segoe UI",
+            scale: 62,      ; кегль, % высоты плашки
+        },
         hideFullscreen: true,   ; прятать флажки на мониторе полноэкранного окна
         pollMs: 50,         ; опрос каретки и раскладки
         mousePollMs: 15,    ; опрос курсора: флажок у мыши должен поспевать за ней
@@ -30,7 +36,8 @@ DefaultSettings() {
 }
 
 ; settings.ini (UTF-16, чтобы годились любые символы в кодах):
-;   [General]  opacity, hideFullscreen
+;   [General]  opacity, hideFullscreen, cornerRadius
+;   [Code]     bg, font, scale
 ;   [Caret]    enabled, show, side, gap, size
 ;   [Mouse]    enabled, show, side, gap, size
 ;   [Advanced] pollMs, mousePollMs, caretWin32, caretMsaa, caretUia,
@@ -42,10 +49,15 @@ class SettingsFile {
 
     ; Все простые настройки: путь в объекте настроек, секция и ключ ini, вид значения.
     ; По этой таблице настройки читаются из ini, пишутся в него и меняются из окна настроек.
-    ; Виды: num — целое в пределах [lo, hi]; bool; side — сторона из sides; enum — одно из слов lo.
+    ; Виды: num — целое в пределах [lo, hi]; bool; side — сторона из sides; enum — одно из слов lo;
+    ;       color — #rrggbb или none; font — имя шрифта (латиница, цифры, пробел, - и _).
     static Fields := [
         ["opacity",             "General",  "opacity",        "num", 10, 100],
         ["hideFullscreen",      "General",  "hideFullscreen", "bool"],
+        ["cornerRadius",        "General",  "cornerRadius",   "num", 0, 6],
+        ["code.bg",             "Code",     "bg",             "color"],
+        ["code.font",           "Code",     "font",           "font"],
+        ["code.scale",          "Code",     "scale",          "num", 40, 90],
         ["caret.enabled",       "Caret",    "enabled",        "bool"],
         ["caret.show",          "Caret",    "show",           "enum", ["flag", "code"]],
         ["caret.side",          "Caret",    "side",           "side"],
@@ -133,6 +145,11 @@ class SettingsFile {
                     case "0", "false", "no", "off": return false
                 }
                 return ""
+            case "color":
+                v := StrLower(v)
+                return v = "none" || v ~= "^#[0-9a-f]{6}$" ? v : ""
+            case "font":
+                return v ~= "^[A-Za-z0-9 _-]{1,40}$" ? v : ""
             case "side", "enum":
                 for w in (f[4] = "side" ? SettingsFile.sides : f[5])
                     if v = w

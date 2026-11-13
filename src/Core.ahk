@@ -6,7 +6,9 @@
 ;          fullscreen: {x, y, w, h} | ""}
 ;         координаты в физических пикселях; glyph — видимые границы «I» на экране;
 ;         fullscreen — монитор, который целиком занят активным окном без рамки
-; Размещение: {flag, text, x, y, w, h, alpha} — flag = "" значит картинки нет, показать text
+; Размещение: {flag, text, x, y, w, h, alpha, radius, bg, font, scale} — flag = "" значит картинки нет,
+;             показать text на плашке: фон bg (#rrggbb | none), шрифт font, кегль scale % высоты;
+;             radius — скругление углов в физических пикселях
 
 class Core {
     ; hasFlag: code -> true/false, есть ли картинка флага
@@ -14,8 +16,8 @@ class Core {
     static Decide(snap, settings, hasFlag) {
         ind := Core.MapLayout(snap.hkl, hasFlag, settings.layouts)
         result := {
-            caret: Core.PlaceIndicator(ind, snap.caret, settings.caret, snap.caretDpi, settings.opacity),
-            mouse: Core.PlaceIndicator(ind, Core.MouseAnchor(snap.mouse), settings.mouse, snap.mouseDpi, settings.opacity),
+            caret: Core.PlaceIndicator(ind, snap.caret, settings.caret, snap.caretDpi, settings),
+            mouse: Core.PlaceIndicator(ind, Core.MouseAnchor(snap.mouse), settings.mouse, snap.mouseDpi, settings),
         }
         ; Полноэкранное окно (игра, видео) прячет флажки на своём мониторе, но не на соседнем
         if settings.hideFullscreen && IsObject(snap.fullscreen) {
@@ -41,8 +43,8 @@ class Core {
     }
 
     ; s — настройки индикатора: {enabled, show, side, gap, size} и, у каретки, режим размера.
-    ; show = "code" — вместо флага всегда плашка с кодом языка
-    static PlaceIndicator(ind, anchor, s, dpi, opacity) {
+    ; show = "code" — вместо флага всегда плашка с кодом языка. all — все настройки (вид флажка)
+    static PlaceIndicator(ind, anchor, s, dpi, all) {
         flag := s.show = "code" ? "" : ind.flag
         if !s.enabled || !IsObject(anchor) || (flag = "" && ind.text = "")
             return ""
@@ -52,7 +54,8 @@ class Core {
         w := Round((flag != "" ? size * 4 / 3 : Core.CodeWidth(size, ind.text)) * scale)
         pos := Core.Place(anchor, s.side, Round(s.gap * scale), w, h)
         return {flag: flag, text: ind.text, x: pos.x, y: pos.y, w: w, h: h,
-            alpha: Round(opacity * 255 / 100)}
+            alpha: Round(all.opacity * 255 / 100), radius: all.cornerRadius * h / 12,
+            bg: all.code.bg, font: all.code.font, scale: all.code.scale}
     }
 
     ; Ширина плашки кода высотой h: два знака — как флаг 4:3, длиннее — шире

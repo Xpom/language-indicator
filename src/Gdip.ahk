@@ -36,10 +36,14 @@ class Gdip {
 
     static DisposeImage(img) => img && DllCall("gdiplus\GdipDisposeImage", "ptr", img)
 
-    ; Замкнутый контур скруглённого прямоугольника (радиус r) — GpPath*
+    ; Замкнутый контур скруглённого прямоугольника (радиус r; 0 — прямые углы) — GpPath*
     static RoundRectPath(x, y, w, h, r) {
         DllCall("gdiplus\GdipCreatePath", "int", 0, "ptr*", &path := 0)
-        d := 2 * r
+        if r <= 0 {
+            DllCall("gdiplus\GdipAddPathRectangle", "ptr", path, "float", x, "float", y, "float", w, "float", h)
+            return path
+        }
+        d := Min(2 * r, w, h)
         DllCall("gdiplus\GdipAddPathArc", "ptr", path, "float", x, "float", y, "float", d, "float", d, "float", 180, "float", 90)
         DllCall("gdiplus\GdipAddPathArc", "ptr", path, "float", x + w - d, "float", y, "float", d, "float", d, "float", 270, "float", 90)
         DllCall("gdiplus\GdipAddPathArc", "ptr", path, "float", x + w - d, "float", y + h - d, "float", d, "float", d, "float", 0, "float", 90)

@@ -19,7 +19,7 @@ class FlagOverlay {
             this.Hide()
             return
         }
-        look := p.flag "|" p.text "|" p.w "|" p.h "|" p.alpha
+        look := p.flag "|" p.text "|" p.w "|" p.h "|" p.alpha "|" p.radius "|" p.bg "|" p.font "|" p.scale
         if look != this.look {
             this.Render(p)
             this.look := look
@@ -42,23 +42,49 @@ class FlagOverlay {
         this.visible := false
     }
 
-    ; Код языка по центру прямоугольника w×h; кегль подбирается так, чтобы 2–4 буквы влезли
-    static DrawCode(g, text, w, h) {
-        em := Min(h * 0.72, w * 0.95 / Max(StrLen(text), 1) / 0.62)
-        DllCall("gdiplus\GdipCreateFontFamilyFromName", "str", "Segoe UI", "ptr", 0, "ptr*", &family := 0)
-        DllCall("gdiplus\GdipCreateFont", "ptr", family, "float", em, "int", 1, "int", 2, "ptr*", &font := 0)   ; Bold, UnitPixel
-        DllCall("gdiplus\GdipCreateStringFormat", "int", 0x1000, "int", 0, "ptr*", &format := 0)              ; NoWrap
-        DllCall("gdiplus\GdipSetStringFormatAlign", "ptr", format, "int", 1)                                  ; по центру
-        DllCall("gdiplus\GdipSetStringFormatLineAlign", "ptr", format, "int", 1)
-        DllCall("gdiplus\GdipSetTextRenderingHint", "ptr", g, "int", 4)                                       ; AntiAlias: ClearType на слое с альфой даёт кайму
-        DllCall("gdiplus\GdipCreateSolidFill", "uint", 0xFFFFFFFF, "ptr*", &brush := 0)
-        rect := Buffer(16)
-        NumPut("float", 0, "float", 0, "float", w, "float", h, rect)
-        DllCall("gdiplus\GdipDrawString", "ptr", g, "str", text, "int", -1, "ptr", font, "ptr", rect, "ptr", format, "ptr", brush)
+    ; Код языка строго по центру плашки w×h: буквы переводятся в контур, и по его границам
+    ; (а не по строке шрифта с её пустыми полями) контур ставится в центр. Кегль — p.scale %
+    ; высоты; если код не влезает по ширине, контур сжимается. Без фона — белые буквы
+    ; с тёмной обводкой, иначе цвет букв контрастный к фону.
+    static DrawCode(g, p, w, h) {
+        bold := p.font = "Segoe UI"
+        if DllCall("gdiplus\GdipCreateFontFamilyFromName", "str", p.font, "ptr", 0, "ptr*", &family := 0) != 0 {
+            DllCall("gdiplus\GdipCreateFontFamilyFromName", "str", "Segoe UI", "ptr", 0, "ptr*", &family := 0)
+            bold := true
+        }
+        DllCall("gdiplus\GdipCreateStringFormat", "int", 0x1000, "int", 0, "ptr*", &format := 0)      ; NoWrap
+        DllCall("gdiplus\GdipCreatePath", "int", 0, "ptr*", &path := 0)
+        layout := Buffer(16, 0)                                                                        ; 0×0 — без переносов и обрезки
+        DllCall("gdiplus\GdipAddPathString", "ptr", path, "str", p.text, "int", -1, "ptr", family, "int", bold ? 1 : 0,
+            "float", h * p.scale / 100, "ptr", layout, "ptr", format)
+        b := Buffer(16)
+        DllCall("gdiplus\GdipGetPathWorldBounds", "ptr", path, "ptr", b, "ptr", 0, "ptr", 0)
+        bx := NumGet(b, 0, "float"), by := NumGet(b, 4, "float"), bw := NumGet(b, 8, "float"), bh := NumGet(b, 12, "float")
+        k := bw > w * 0.86 ? w * 0.86 / bw : 1
+        DllCall("gdiplus\GdipCreateMatrix2", "float", k, "float", 0, "float", 0, "float", k,
+            "float", w / 2 - (bx + bw / 2) * k, "float", h / 2 - (by + bh / 2) * k, "ptr*", &m := 0)
+        DllCall("gdiplus\GdipTransformPath", "ptr", path, "ptr", m)
+        if p.bg = "none" {
+            DllCall("gdiplus\GdipCreatePen1", "uint", 0xB0000000, "float", Max(1, h / 8), "int", 2, "ptr*", &pen := 0)
+            DllCall("gdiplus\GdipSetPenLineJoin", "ptr", pen, "int", 2)   ; скруглённые стыки
+            DllCall("gdiplus\GdipDrawPath", "ptr", g, "ptr", pen, "ptr", path)
+            DllCall("gdiplus\GdipDeletePen", "ptr", pen)
+        }
+        DllCall("gdiplus\GdipCreateSolidFill", "uint", FlagOverlay.Ink(p.bg), "ptr*", &brush := 0)
+        DllCall("gdiplus\GdipFillPath", "ptr", g, "ptr", brush, "ptr", path)
         DllCall("gdiplus\GdipDeleteBrush", "ptr", brush)
+        DllCall("gdiplus\GdipDeleteMatrix", "ptr", m)
+        DllCall("gdiplus\GdipDeletePath", "ptr", path)
         DllCall("gdiplus\GdipDeleteStringFormat", "ptr", format)
-        DllCall("gdiplus\GdipDeleteFont", "ptr", font)
         DllCall("gdiplus\GdipDeleteFontFamily", "ptr", family)
+    }
+
+    ; Цвет букв: тёмный на светлом фоне, белый на тёмном и без фона
+    static Ink(bg) {
+        if bg = "none"
+            return 0xFFFFFFFF
+        n := Integer("0x" SubStr(bg, 2))
+        return 0.299 * (n >> 16) + 0.587 * (n >> 8 & 0xFF) + 0.114 * (n & 0xFF) > 160 ? 0xFF1D2430 : 0xFFFFFFFF
     }
 
     Image(code) {
@@ -80,9 +106,9 @@ class FlagOverlay {
         DllCall("gdiplus\GdipSetInterpolationMode", "ptr", g, "int", 7)      ; HighQualityBicubic
         DllCall("gdiplus\GdipSetPixelOffsetMode", "ptr", g, "int", 4)        ; Half
 
-        r := Max(1, Round(h / 6))
+        r := p.radius
         path := Gdip.RoundRectPath(0, 0, w, h, r)
-        scaled := 0
+        scaled := 0, brush := 0
         if p.flag != "" {
             ; Картинку сначала масштабируем в w×h, затем заливаем ею скруглённый контур —
             ; так углы сглажены (клип по контуру сглаживания не даёт).
@@ -95,18 +121,23 @@ class FlagOverlay {
             DllCall("gdiplus\GdipCreateTexture", "ptr", scaled, "int", 4, "ptr*", &brush := 0)   ; WrapModeClamp
             DllCall("gdiplus\GdipFillPath", "ptr", g, "ptr", brush, "ptr", path)
         } else {
-            ; Текстовая плашка: тёмная подложка того же размера и формы, код языка белым
-            DllCall("gdiplus\GdipCreateSolidFill", "uint", 0xFF3C4043, "ptr*", &brush := 0)
-            DllCall("gdiplus\GdipFillPath", "ptr", g, "ptr", brush, "ptr", path)
-            FlagOverlay.DrawCode(g, p.text, w, h)
+            ; Текстовая плашка: подложка того же размера и формы (если есть фон) и код языка
+            if p.bg != "none" {
+                DllCall("gdiplus\GdipCreateSolidFill", "uint", 0xFF000000 | Integer("0x" SubStr(p.bg, 2)), "ptr*", &brush)
+                DllCall("gdiplus\GdipFillPath", "ptr", g, "ptr", brush, "ptr", path)
+            }
+            FlagOverlay.DrawCode(g, p, w, h)
         }
         Gdip.DeletePath(path)
 
         ; Тонкая полупрозрачная рамка, чтобы белые полосы не терялись на белом фоне
-        DllCall("gdiplus\GdipCreatePen1", "uint", 0x59000000, "float", 1, "int", 2, "ptr*", &pen := 0)
-        border := Gdip.RoundRectPath(0.5, 0.5, w - 1, h - 1, r)
-        DllCall("gdiplus\GdipDrawPath", "ptr", g, "ptr", pen, "ptr", border)
-        Gdip.DeletePath(border)
+        if p.flag != "" || p.bg != "none" {
+            DllCall("gdiplus\GdipCreatePen1", "uint", 0x59000000, "float", 1, "int", 2, "ptr*", &pen := 0)
+            border := Gdip.RoundRectPath(0.5, 0.5, w - 1, h - 1, Max(0, r - 0.5))
+            DllCall("gdiplus\GdipDrawPath", "ptr", g, "ptr", pen, "ptr", border)
+            Gdip.DeletePath(border)
+            DllCall("gdiplus\GdipDeletePen", "ptr", pen)
+        }
 
         pt := Buffer(8), size := Buffer(8), src := Buffer(8, 0), blend := Buffer(4)
         NumPut("int", p.x, "int", p.y, pt)
@@ -116,8 +147,8 @@ class FlagOverlay {
         DllCall("UpdateLayeredWindow", "ptr", this.hwnd, "ptr", 0, "ptr", pt, "ptr", size,
             "ptr", hdc, "ptr", src, "uint", 0, "ptr", blend, "uint", 2)        ; ULW_ALPHA
 
-        DllCall("gdiplus\GdipDeletePen", "ptr", pen)
-        DllCall("gdiplus\GdipDeleteBrush", "ptr", brush)
+        if brush
+            DllCall("gdiplus\GdipDeleteBrush", "ptr", brush)
         if scaled
             Gdip.DisposeImage(scaled)
         DllCall("gdiplus\GdipDeleteGraphics", "ptr", g)

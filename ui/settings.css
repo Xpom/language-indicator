@@ -165,3 +165,22 @@ svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width:
 .gal-grid .cell span { font-size: 10.5px; text-align: center; line-height: 1.2; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .gal-grid [hidden] { display: none; }
 .gal-empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 30px; }
+
+/* Плитки «Флажок» и «Код» */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pair .tile { display: flex; flex-direction: column; gap: 9px; padding: 11px; }
+.pair .tile .titled { gap: 8px; }
+.pair .tile .titled .ico, .pair .tile .titled svg { font-size: 15px; color: var(--muted); }
+.pair .tile .titled h4 { font-size: 13px; }
+.pv-big { height: 62px; border-radius: 10px; background: var(--field); display: flex; align-items: center; justify-content: center; }
+.pv-big .f { width: 52px; height: 39px; background: center/cover; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+.pv-big .c { height: 39px; min-width: 60px; padding: 0 6px; display: flex; align-items: center; justify-content: center; }
+.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.swatches span, .swatches label { aspect-ratio: 1; border-radius: 6px; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); position: relative; }
+.swatches .sel { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
+.swatches .empty { background: repeating-conic-gradient(var(--off) 0 25%, var(--card) 0 50%) 0 0/8px 8px; }
+.swatches label { background: conic-gradient(#f44, #fd4, #4d4, #4dd, #44f, #d4d, #f44); }
+.swatches label input { opacity: 0; position: absolute; inset: 0; cursor: pointer; }
+.sel-font { width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--field); color: var(--ink); font-size: 12px; }
+.fsr { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.fsr .track { flex: 1; }

@@ -51,7 +51,10 @@ Test("позиция: слева сверху", (*) => AssertEq(PlaceAt("top-lef
 
 Test("Decide: по умолчанию флажок под кареткой, 16×12, отступ 3", (*) => AssertEq(
     Core.Decide(Snap(), DefaultSettings(), AllFlags).caret,
-    {flag: "ru", text: "RU", x: 100, y: 223, w: 16, h: 12, alpha: 217}))
+    {flag: "ru", text: "RU", x: 100, y: 223, w: 16, h: 12, alpha: 217, radius: 2.0, bg: "#3c4043", font: "Segoe UI", scale: 62}))
+
+Test("Decide: скругление растёт вместе с размером (24 px, DPI 150%)", (*) => AssertEq(
+    (s := DefaultSettings(), s.caret.size := 24, Core.Decide(Snap(, , 144), s, AllFlags).caret.radius), 6.0))
 
 DecideAtDpi(dpi) {
     p := Core.Decide(Snap(, , dpi), DefaultSettings(), AllFlags).caret

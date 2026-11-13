@@ -7,7 +7,8 @@ const host = window.chrome && window.chrome.webview;
 const DEMO = {
   type: "state", autostart: 1, layout: { flag: "ru", text: "RU" },
   settings: {
-    opacity: 85, hideFullscreen: 1, pollMs: 50, mousePollMs: 15,
+    opacity: 85, hideFullscreen: 1, pollMs: 50, mousePollMs: 15, cornerRadius: 2,
+    code: { bg: "#3c4043", font: "Segoe UI", scale: 62 },
     caret: { enabled: 1, show: "flag", side: "bottom", gap: 3, size: 12, methods: { win32: 1, msaa: 1, uia: 1 }, sizeMode: "fixed", sizeRatio: 70, sizeMin: 8, sizeMax: 32 },
     mouse: { enabled: 1, show: "flag", side: "bottom-right", gap: 3, size: 12 },
     layouts: {},
@@ -25,6 +26,7 @@ const T = {
   gap: "Отступ", auto: "Автозапуск", autoOn: "С Windows", autoOff: "Выключен", opacity: "Непрозрачность",
   showFlag: "Показывать флаг", showCode: "Показывать код языка",
   sizeCaret: "Размер флажка у каретки", sizeMouse: "Размер флажка у мыши",
+  radius: "Скругление углов", flagT: "Флажок", codeT: "Код", customColor: "Свой цвет", noBg: "Без фона", codeSize: "Размер букв",
   general: "Общие", full: "Прятать в полноэкранных", layouts: "Раскладки", methods: "Искать", poll: "Опрос, мс",
   pick: "Нажмите, чтобы выбрать другой флаг", reset: "Как обычно", none: "Без флага", search: "Страна или код…", nothing: "Ничего не нашлось",
   sides: { "top-left": "Сверху слева", top: "Сверху", "top-right": "Сверху справа", left: "Слева", right: "Справа", "bottom-left": "Снизу слева", bottom: "Снизу", "bottom-right": "Снизу справа" },
@@ -39,10 +41,12 @@ const I = {
   ibeam: `<svg width="9" height="20" viewBox="0 0 9 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1h2.5a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H1M8 1H5.5a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1H8"/></svg>`,
 };
 const G = { flag: "", gear: "", min: "", close: "", gap: "", auto: "", opacity: "" ,
-  full: "\uE740", poll: "\uE916", reset: "\uE777", down: "\uE70D", search: "\uE721", x: "\uE711", tick: "\uE73E" };
+  full: "\uE740", poll: "\uE916", reset: "\uE777", down: "\uE70D", search: "\uE721", x: "\uE711", tick: "\uE73E", code: "\uE8D2" };
 const SIDES = ["top-left", "top", "top-right", "left", null, "right", "bottom-left", "bottom", "bottom-right"];
 // Пределы контролов (в ini пределы шире — см. SettingsFile.Fields)
-const SIZE = [8, 32], GAP = [0, 12], OPACITY = [10, 100], POLL = [15, 200], MOUSE_POLL = [10, 100];
+const SIZE = [8, 32], GAP = [0, 12], OPACITY = [10, 100], POLL = [15, 200], MOUSE_POLL = [10, 100], RADIUS = [0, 6], CODE_SCALE = [40, 90];
+const FONTS = ["Segoe UI", "Segoe UI Semibold", "Bahnschrift", "Arial", "Verdana", "Tahoma", "Consolas", "Georgia"];
+const BGS = ["none", "#3c4043", "#000000", "#ffffff", "#1a73e8", "#d93025", "#188038", "#f9ab00", "#9334e6"];
 
 let state = null;
 let adv = null;         // правая панель: null — закрыта; "general" | "caret" | "mouse" — какой раздел подсвечен
@@ -89,6 +93,15 @@ function place(side, ax, ay, aw, ah, fw, fh, gap) {
   const L = ax - gap - fw, R = ax + aw + gap, Tp = ay - gap - fh, B = ay + ah + gap, mid = ay + (ah - fh) / 2;
   return { "top-left": [L, Tp], top: [ax, Tp], "top-right": [R, Tp], left: [L, mid], right: [R, mid], "bottom-left": [L, B], bottom: [ax, B], "bottom-right": [R, B] }[side];
 }
+// Вид плашки кода — как FlagOverlay: цвет букв по яркости фона, без фона — белые с обводкой
+function codeStyle(h) {
+  const c = state.settings.code, none = c.bg === "none";
+  const n = none ? 0 : parseInt(c.bg.slice(1), 16), y = 0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255);
+  return `background:${none ? "transparent" : c.bg};box-shadow:${none ? "none" : "0 0 0 1px rgba(0,0,0,.35)"};` +
+    `color:${!none && y > 160 ? "#1d2430" : "#fff"};text-shadow:${none ? "0 0 2px #000,0 0 2px #000,0 0 1px #000" : "none"};` +
+    `font-family:'${c.font}';font-weight:${c.font === "Segoe UI" ? 700 : 400};font-size:${Math.round(h * c.scale / 100)}px;` +
+    `border-radius:${state.settings.cornerRadius * h / 12}px`;
+}
 // Ширина плашки кода — как Core.CodeWidth
 const codeWidth = (h, text) => Math.max(h * 4 / 3, h * (0.42 * text.length + 0.5));
 function putFlag(box, ind, a) {
@@ -97,9 +110,10 @@ function putFlag(box, ind, a) {
   const w = Math.round(flag ? h * 4 / 3 : codeWidth(h, lay.text)), [x, y] = place(ind.side, a.x, a.y, a.w, a.h, w, h, ind.gap);
   const f = document.createElement("div");
   f.className = "flag";
-  Object.assign(f.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px", opacity: get("opacity") / 100, borderRadius: "2px" });
-  if (flag) f.style.backgroundImage = `url(${flagUrl(flag)})`;
-  else f.innerHTML = `<span class="ct" style="font-size:${Math.round(h * .62)}px">${lay.text}</span>`;
+  if (!flag) f.style.cssText = codeStyle(h);
+  Object.assign(f.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px", opacity: get("opacity") / 100 });
+  if (flag) Object.assign(f.style, { backgroundImage: `url(${flagUrl(flag)})`, borderRadius: get("cornerRadius") * h / 12 + "px" });
+  else f.innerHTML = `<span class="ct">${lay.text}</span>`;
   box.appendChild(f);
 }
 function preview(pv) {
@@ -179,7 +193,9 @@ function Side() {
       <span class="ico reset ${l.flag || l.text ? "" : "none"}" data-reset="${l.hkl}" title="${t("reset")}">${G.reset}</span></div>`;
   return `<div class="adv">
     ${sec("general", `<span class="ico">${G.gear}</span>`, t("general"), `
+      <div class="r"><span class="ico">${G.flag}</span>${t("radius")}${track("rad", s.cornerRadius, RADIUS)}<span class="v">${s.cornerRadius}px</span></div>
       <div class="r"><span class="ico">${G.full}</span>${t("full")}<span class="sp"></span><div class="toggle ${s.hideFullscreen ? "on" : ""}" id="hf"></div></div>`)}
+    ${Pair()}
     ${sec("layouts", `<span class="ico">${G.flag}</span>`, t("layouts"), state.layouts.map(lay).join(""))}
     ${sec("caret", I.caret, t("caret"), `
       <div class="r">${t("methods")}<span class="sp"></span>${["win32", "msaa", "uia"].map(m => cb(c.methods[m], m)).join("")}</div>
@@ -188,7 +204,27 @@ function Side() {
   </div>`;
 }
 
+// Плитки «Флажок» и «Код» с крупными образцами; на «Коде» без подписей: фон, шрифт, размер букв
+function Pair() {
+  const s = state.settings, lay = state.layout, big = 39;
+  const sw = b => `<span data-bg="${b}" class="${b === "none" ? "empty" : ""} ${b === s.code.bg ? "sel" : ""}" style="${b === "none" ? "" : "background:" + b}" title="${b === "none" ? t("noBg") : b}"></span>`;
+  return `<div class="pair">
+    <div class="card tile"><div class="titled"><span class="ico">${G.flag}</span><h4>${t("flagT")}</h4></div>
+      <div class="pv-big">${lay.flag ? `<div class="f" style="border-radius:${s.cornerRadius * big / 12}px;background-image:url(${flagUrl(lay.flag)})"></div>` : ""}</div></div>
+    <div class="card tile"><div class="titled"><span class="ico">${G.code}</span><h4>${t("codeT")}</h4></div>
+      <div class="pv-big"><div class="c" style="${codeStyle(big)}"><span class="ct">${lay.text}</span></div></div>
+      <div class="swatches">${BGS.map(sw).join("")}<label class="${BGS.includes(s.code.bg) ? "" : "sel"}" title="${t("customColor")}"><input type="color" id="bgc" value="${s.code.bg === "none" ? "#3c4043" : s.code.bg}"></label></div>
+      <select class="sel-font" id="font">${FONTS.map(f => `<option ${f === s.code.font ? "selected" : ""} style="font-family:'${f}'">${f}</option>`).join("")}</select>
+      <div class="fsr" title="${t("codeSize")}: ${s.code.scale}%"><span style="font-size:10px">A</span>${track("fs", s.code.scale, CODE_SCALE)}<span style="font-size:16px">A</span></div>
+    </div></div>`;
+}
+
 function bindSide(app) {
+  drag("rad", "x", RADIUS, "cornerRadius");
+  drag("fs", "x", CODE_SCALE, "code.scale");
+  app.querySelectorAll("[data-bg]").forEach(el => el.onclick = () => set("code.bg", el.dataset.bg));
+  app.querySelector("#bgc").onchange = e => set("code.bg", e.target.value);
+  app.querySelector("#font").onchange = e => set("code.font", e.target.value);
   app.querySelector("#hf").onclick = () => set("hideFullscreen", !get("hideFullscreen"));
   app.querySelectorAll("[data-method]").forEach(el => el.onclick = () => set("caret.methods." + el.dataset.method, !get("caret.methods." + el.dataset.method)));
   drag("cpoll", "x", POLL, "pollMs");
