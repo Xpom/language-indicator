@@ -1,5 +1,6 @@
 ; Language Indicator — флажок текущей раскладки у каретки и у текстового курсора мыши.
-; Ключи: /no-elevate — не поднимать права (для отладки), /settings — сразу открыть настройки.
+; Ключи: /no-elevate — не поднимать права (для отладки), /settings — сразу открыть настройки,
+;        /devtools — инструменты разработчика в окне настроек.
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 Persistent
@@ -11,6 +12,8 @@ Persistent
 #Include src\Gdip.ahk
 #Include src\Overlay.ahk
 #Include src\Autostart.ahk
+#Include src\Json.ahk
+#Include src\SettingsPage.ahk
 #Include src\SettingsWindow.ahk
 #Include src\AdvancedWindow.ahk
 
@@ -60,7 +63,7 @@ class App {
         App.BuildTray()
         App.StartTimers()
         if HasArg("/settings")
-            SettingsWindow.Open(App)
+            SettingsPage.Open(App)
     }
 
     static StartTimers() {
@@ -106,7 +109,7 @@ class App {
         A_IconTip := "Language Indicator"
         m := A_TrayMenu
         m.Delete()
-        m.Add("Настройки", (*) => SettingsWindow.Open(App))
+        m.Add("Настройки", (*) => SettingsPage.Open(App))
         m.Default := "Настройки"         ; двойной клик по иконке
         m.Add()
         m.Add("Пауза", (*) => App.TogglePause())

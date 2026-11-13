@@ -1,0 +1,54 @@
+/* Окно настроек. Вид — по прототипу на ветке prototype/settings-ui. */
+:root {
+  --bg: #e9eef3; --card: #ffffff; --ink: #1d2430; --muted: #8a93a1; --line: #e3e7ec;
+  --accent: #4a90e2; --off: #d9dee4; --knob: #ffffff; --field: #f6f8fa;
+  --shadow: 0 1px 2px rgba(20,30,50,.06), 0 4px 14px rgba(20,30,50,.06);
+  --hero-1: #ffbf5a; --hero-2: #f08c00;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15181d; --card: #1f242b; --ink: #e8ecf1; --muted: #8b95a3; --line: #2c333c;
+    --accent: #4f97ea; --off: #3a424d; --knob: #e8ecf1; --field: #171b21;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); overflow: hidden; }
+body { font: 13px "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; color: var(--ink); user-select: none; }
+#app { width: 360px; display: inline-block; vertical-align: top; }
+#app.wide { width: 720px; }
+.ico { font-family: "Segoe Fluent Icons", "Segoe MDL2 Assets"; font-style: normal; line-height: 1; }
+svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+
+/* Заголовок окна: за него окно перетаскивается */
+.titlebar { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 12px; font-weight: 600; app-region: drag; }
+.titlebar .sp { flex: 1; }
+.titlebar button { app-region: no-drag; border: 0; background: transparent; color: var(--muted); width: 32px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.titlebar button:hover { background: var(--line); color: var(--ink); }
+.titlebar button.on { color: var(--accent); }
+.titlebar button.close:hover { background: #c42b1c; color: #fff; }
+.cols { display: grid; grid-template-columns: 336px; gap: 12px; padding: 0 12px 12px; }
+#app.wide .cols { grid-template-columns: 336px 348px; }
+
+.card { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; align-content: start; }
+.tile { padding: 12px; position: relative; overflow: hidden; }
+.tile h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.tile small { color: var(--muted); font-size: 11px; }
+.wide { grid-column: span 2; }
+.full { grid-column: 1 / -1; }
+
+/* Плитки-чекбоксы: галочка на фоне, яркая у включённой и бледная у выключенной */
+.chk { cursor: pointer; min-height: 92px; transition: background .15s; }
+.chk .big-ico { font-size: 24px; color: var(--accent); position: relative; z-index: 1; }
+.chk h4 { margin-top: 12px; position: relative; z-index: 1; }
+.chk small { position: relative; z-index: 1; }
+.chk .tick { position: absolute; right: 2px; bottom: 2px; width: 62px; height: 46px; fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .2; transition: opacity .15s; }
+.chk.on { background: linear-gradient(135deg, #5aa2ec, #3f7fd6); color: #fff; }
+.chk.on .big-ico, .chk.on small { color: rgba(255,255,255,.9); }
+.chk.on .tick { stroke: #fff; opacity: .95; filter: drop-shadow(0 2px 3px rgba(0,0,0,.22)); }
+
+/* Выключенные каретка или мышь гасят свои плитки */
+.off { opacity: .35; filter: grayscale(1); pointer-events: none; }

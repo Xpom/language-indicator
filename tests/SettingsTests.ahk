@@ -107,3 +107,20 @@ DecideWithOverrides() {
 }
 Test("Decide: переопределения из настроек доходят до размещения",
     (*) => AssertEq(DecideWithOverrides(), {flag: "", text: "РУ"}))
+
+; --- изменение одной настройки из окна ---
+
+SetAndShow(key, value) {
+    s := DefaultSettings()
+    ok := SettingsFile.Set(s, key, value)
+    return ok ": " Show(SettingsFile.Get(s, key))
+}
+
+Test("Set: годное число", (*) => AssertEq(SetAndShow("caret.size", "20"), "1: 20"))
+Test("Set: число вне пределов отброшено", (*) => AssertEq(SetAndShow("opacity", 5), "0: 85"))
+Test("Set: булево", (*) => AssertEq(SetAndShow("mouse.enabled", "false"), "1: 0"))
+Test("Set: сторона в любом регистре", (*) => AssertEq(SetAndShow("caret.side", "Top-Left"), '1: "top-left"'))
+Test("Set: вложенный путь", (*) => AssertEq(SetAndShow("caret.methods.uia", 0), "1: 0"))
+Test("Set: неизвестный ключ", (*) => AssertEq(SettingsFile.Set(DefaultSettings(), "layouts", "x"), false))
+Test("Set: максимум не меньше минимума", (*) => (s := DefaultSettings(), SettingsFile.Set(s, "caret.sizeMin", 40),
+    AssertEq(s.caret.sizeMax, 40)))

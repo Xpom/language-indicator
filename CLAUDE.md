@@ -11,7 +11,7 @@ AutoHotkey v2 стоит в `C:\Program Files\AutoHotkey\v2`.
 ```bash
 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" LanguageIndicator.ahk               # сам поднимает права (UAC)
 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" LanguageIndicator.ahk /no-elevate   # без UAC, для отладки
-"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" LanguageIndicator.ahk /no-elevate /settings   # сразу открыть окно настроек
+MSYS_NO_PATHCONV=1 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" LanguageIndicator.ahk /no-elevate /settings   # сразу открыть окно настроек (+ /devtools — инструменты разработчика)
 MSYS_NO_PATHCONV=1 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" /ErrorStdOut tests/run.ahk | cat   # тесты, код выхода 0 = всё прошло
 ```
 
@@ -35,10 +35,11 @@ PostMessage(0x111, 65405, 0, , "LanguageIndicator.ahk ahk_class AutoHotkey")
 ## Устройство
 
 - `src/Core.ahk` — ядро: чистая функция «снимок → размещения» (`Core.Decide`), маппинг раскладки, расчёт позиции. Системы не трогает, всё покрыто тестами.
-- `src/Settings.ahk` — значения по умолчанию и `settings.ini` рядом со скриптом (UTF-16, в `.gitignore`; создаётся при первом запуске). Негодные значения заменяются значениями по умолчанию; `[Layouts]` — переопределения флага и кода по полному HKL.
+- `src/Settings.ahk` — значения по умолчанию и `settings.ini`; простые настройки описаны таблицей `SettingsFile.Fields` (чтение, запись и изменение из окна) рядом со скриптом (UTF-16, в `.gitignore`; создаётся при первом запуске). Негодные значения заменяются значениями по умолчанию; `[Layouts]` — переопределения флага и кода по полному HKL.
 - `src/Locale.ahk` — справочник локалей Windows (LANGID → страна/язык); детерминирован, используется в тестах.
 - `src/Probes.ahk` — адаптеры: раскладка активного окна, каретка, DPI монитора. Без логики решений.
-- `src/SettingsWindow.ahk` — окно настроек без надписей (значки Segoe MDL2, тексты собраны в `SettingsWindow.Texts`). Пока окно активно, флажки показываются у образцов в сетках — это живой предпросмотр; ✓ сохраняет ini, ✕ перечитывает его.
+- `src/SettingsPage.ahk` + `ui/` — окно настроек: HTML-страница в WebView2 (`lib/WebView2`, thqby/ahk2_lib, MIT; `WebView2Loader.dll` из NuGet Microsoft.Web.WebView2). Страница шлёт строки `set<Tab>путь<Tab>значение`, AHK применяет через `SettingsFile.Set` и сразу пишет ini; AHK отдаёт состояние JSON-ом (`src/Json.ahk`). `ui/settings.html` открывается и в обычном браузере — на образце состояния, для вёрстки.
+- `src/SettingsWindow.ahk` — старое окно настроек (уходит, тикет #19) без надписей (значки Segoe MDL2, тексты собраны в `SettingsWindow.Texts`). Пока окно активно, флажки показываются у образцов в сетках — это живой предпросмотр; ✓ сохраняет ini, ✕ перечитывает его.
 - `src/AdvancedWindow.ahk` — окно «Дополнительно» (шестерёнка): переопределения раскладок с сеткой флагов, способы поиска каретки, частота опроса, размер по высоте каретки. Тексты допустимы; сохранение и откат — кнопками основного окна.
 - `src/Autostart.ahk` — задача Планировщика из XML (наивысшие права, без лимита времени); создаётся только из процесса администратора.
 - `src/Overlay.ahk`, `src/Gdip.ahk` — окно-слой с флажком (GDI+, попиксельная альфа).
