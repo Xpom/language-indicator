@@ -8,6 +8,7 @@ DefaultSettings() {
         mousePollMs: 15,    ; опрос курсора: флажок у мыши должен поспевать за ней
         caret: {
             enabled: true,
+            show: "flag",   ; flag — флаг раскладки; code — плашка с кодом языка
             side: "bottom", ; см. Core.Place
             gap: 3,
             size: 12,       ; высота флажка; ширина = высота * 4/3
@@ -19,6 +20,7 @@ DefaultSettings() {
         },
         mouse: {
             enabled: true,
+            show: "flag",
             side: "bottom-right",
             gap: 3,
             size: 12,
@@ -29,8 +31,8 @@ DefaultSettings() {
 
 ; settings.ini (UTF-16, чтобы годились любые символы в кодах):
 ;   [General]  opacity, hideFullscreen
-;   [Caret]    enabled, side, gap, size
-;   [Mouse]    enabled, side, gap, size
+;   [Caret]    enabled, show, side, gap, size
+;   [Mouse]    enabled, show, side, gap, size
 ;   [Advanced] pollMs, mousePollMs, caretWin32, caretMsaa, caretUia,
 ;              caretSizeMode, caretSizeRatio, caretSizeMin, caretSizeMax
 ;   [Layouts]  04090409=gb|EN — полный HKL в hex = флаг|код
@@ -45,10 +47,12 @@ class SettingsFile {
         ["opacity",             "General",  "opacity",        "num", 10, 100],
         ["hideFullscreen",      "General",  "hideFullscreen", "bool"],
         ["caret.enabled",       "Caret",    "enabled",        "bool"],
+        ["caret.show",          "Caret",    "show",           "enum", ["flag", "code"]],
         ["caret.side",          "Caret",    "side",           "side"],
         ["caret.gap",           "Caret",    "gap",            "num", 0, 50],
         ["caret.size",          "Caret",    "size",           "num", 6, 64],
         ["mouse.enabled",       "Mouse",    "enabled",        "bool"],
+        ["mouse.show",          "Mouse",    "show",           "enum", ["flag", "code"]],
         ["mouse.side",          "Mouse",    "side",           "side"],
         ["mouse.gap",           "Mouse",    "gap",            "num", 0, 50],
         ["mouse.size",          "Mouse",    "size",           "num", 6, 64],

@@ -8,8 +8,8 @@ const DEMO = {
   type: "state", autostart: 1, layout: { flag: "ru", text: "RU" },
   settings: {
     opacity: 85, hideFullscreen: 1, pollMs: 50, mousePollMs: 15,
-    caret: { enabled: 1, side: "bottom", gap: 3, size: 12, methods: { win32: 1, msaa: 1, uia: 1 }, sizeMode: "fixed", sizeRatio: 70, sizeMin: 8, sizeMax: 32 },
-    mouse: { enabled: 1, side: "bottom-right", gap: 3, size: 12 },
+    caret: { enabled: 1, show: "flag", side: "bottom", gap: 3, size: 12, methods: { win32: 1, msaa: 1, uia: 1 }, sizeMode: "fixed", sizeRatio: 70, sizeMin: 8, sizeMax: 32 },
+    mouse: { enabled: 1, show: "flag", side: "bottom-right", gap: 3, size: 12 },
     layouts: {},
   },
 };
@@ -18,6 +18,7 @@ const T = {
   title: "Индикатор раскладки", more: "Дополнительно", minimize: "Свернуть", close: "Закрыть",
   caret: "Каретка", mouse: "Мышь", shown: "Показывать", hidden: "Скрыто",
   gap: "Отступ", auto: "Автозапуск", autoOn: "С Windows", autoOff: "Выключен", opacity: "Непрозрачность",
+  showFlag: "Показывать флаг", showCode: "Показывать код языка",
   sizeCaret: "Размер флажка у каретки", sizeMouse: "Размер флажка у мыши",
   sides: { "top-left": "Сверху слева", top: "Сверху", "top-right": "Сверху справа", left: "Слева", right: "Справа", "bottom-left": "Снизу слева", bottom: "Снизу", "bottom-right": "Снизу справа" },
 };
@@ -79,13 +80,16 @@ function place(side, ax, ay, aw, ah, fw, fh, gap) {
   const L = ax - gap - fw, R = ax + aw + gap, Tp = ay - gap - fh, B = ay + ah + gap, mid = ay + (ah - fh) / 2;
   return { "top-left": [L, Tp], top: [ax, Tp], "top-right": [R, Tp], left: [L, mid], right: [R, mid], "bottom-left": [L, B], bottom: [ax, B], "bottom-right": [R, B] }[side];
 }
+// Ширина плашки кода — как Core.CodeWidth
+const codeWidth = (h, text) => Math.max(h * 4 / 3, h * (0.42 * text.length + 0.5));
 function putFlag(box, ind, a) {
   if (!ind.enabled) return;
-  const lay = state.layout, h = ind.size, w = Math.round(h * 4 / 3), [x, y] = place(ind.side, a.x, a.y, a.w, a.h, w, h, ind.gap);
+  const lay = state.layout, flag = ind.show === "code" ? "" : lay.flag, h = ind.size;
+  const w = Math.round(flag ? h * 4 / 3 : codeWidth(h, lay.text)), [x, y] = place(ind.side, a.x, a.y, a.w, a.h, w, h, ind.gap);
   const f = document.createElement("div");
   f.className = "flag";
   Object.assign(f.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px", opacity: get("opacity") / 100, borderRadius: "2px" });
-  if (lay.flag) f.style.backgroundImage = `url(${flagUrl(lay.flag)})`;
+  if (flag) f.style.backgroundImage = `url(${flagUrl(flag)})`;
   else f.innerHTML = `<span class="ct" style="font-size:${Math.round(h * .62)}px">${lay.text}</span>`;
   box.appendChild(f);
 }
@@ -112,6 +116,12 @@ function Main() {
   const s = state.settings, off = k => s[k].enabled ? "" : "off";
   const chk = k => `<div class="card tile chk wide ${s[k].enabled ? "on" : ""}" data-chk="${k}">
       <span class="big-ico">${I[k]}</span><h4>${t(k)}</h4><small>${s[k].enabled ? t("shown") : t("hidden")}</small>${I.tick}</div>`;
+  const lay = state.layout;
+  const show = k => `<div class="card wide showrow ${off(k)}">
+      <div class="pill" data-show="${k}">
+        <span data-v="flag" class="${s[k].show !== "code" ? "sel" : ""}" title="${t("showFlag")}">${lay.flag ? `<img src="${flagUrl(lay.flag)}">` : `<b class="code-chip">?</b>`}</span>
+        <span data-v="code" class="${s[k].show === "code" ? "sel" : ""}" title="${t("showCode")}"><b class="code-chip"><span class="ct">${lay.text}</span></b></span></div>
+      <span class="ico gear" data-more="${k}" title="${t("more")}">${G.gear}</span></div>`;
   const grid = k => `<div class="side-grid ${off(k)}" data-grid="${k}">${SIDES.map(side => side
       ? `<span data-side="${side}" class="${side === s[k].side ? "sel" : ""}" title="${t("sides")[side]}"></span>`
       : `<span class="mid">${I[k]}</span>`).join("")}</div>`;
@@ -120,6 +130,7 @@ function Main() {
   const step = k => `<div class="stepper ${off(k)}"><span class="who">${I[k]}</span><button data-step="${k}" data-d="-1">−</button><span class="v">${s[k].gap}px</span><button data-step="${k}" data-d="1">+</button></div>`;
   return `<div class="tiles">
     ${chk("caret")}${chk("mouse")}
+    ${show("caret")}${show("mouse")}
     <div class="card hero"><div class="pv" id="pv"></div><div class="pos">${grid("caret")}${grid("mouse")}</div></div>
     ${vsl("caret")}${vsl("mouse")}
     <div class="card tile wide"><div class="titled"><span class="ico big-ico" style="font-size:20px">${G.gap}</span><h4>${t("gap")}</h4></div>${step("caret")}${step("mouse")}</div>
@@ -131,6 +142,7 @@ function Main() {
 
 function bindMain(app) {
   app.querySelectorAll("[data-chk]").forEach(el => el.onclick = () => set(el.dataset.chk + ".enabled", !get(el.dataset.chk + ".enabled")));
+  app.querySelectorAll("[data-show] [data-v]").forEach(el => el.onclick = () => set(el.parentNode.dataset.show + ".show", el.dataset.v));
   app.querySelectorAll("[data-grid] [data-side]").forEach(el => el.onclick = () => set(el.parentNode.dataset.grid + ".side", el.dataset.side));
   app.querySelectorAll("[data-step]").forEach(el => el.onclick = () => {
     const path = el.dataset.step + ".gap", v = get(path) + Number(el.dataset.d);

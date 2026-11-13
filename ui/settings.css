@@ -102,3 +102,16 @@ svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width:
 .track::before { content: ""; position: absolute; inset: -8px 0; }
 .track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
 .track .knob { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--accent); border: 3px solid var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+
+/* Строка «флаг / код» и шестерёнка под каждым чекбоксом */
+.showrow { display: flex; align-items: center; justify-content: space-between; padding: 7px 6px 7px 8px; }
+.pill { display: flex; height: 32px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+.pill span { width: 48px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.pill span + span { border-left: 1px solid var(--line); }
+.pill span.sel { background: var(--accent); }
+.pill span:not(.sel):hover { background: var(--field); }
+.pill img { width: 24px; height: 18px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.2); display: block; }
+.code-chip { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 18px; border-radius: 2px; background: #3c4043; color: #fff; font: 700 10px "Segoe UI"; }
+.pill .sel .code-chip { background: #fff; color: var(--accent); }
+.gear { color: var(--muted); cursor: pointer; font-size: 16px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.gear:hover, .gear.open { background: var(--field); color: var(--accent); }

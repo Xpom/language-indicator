@@ -78,6 +78,20 @@ Test("Decide: раскладка неизвестна — скрыто",
 Test("Decide: нет картинки — размещение с текстом",
     (*) => AssertEq(Core.Decide(Snap(), DefaultSettings(), NoFlags).caret.flag, ""))
 
+ShowCode(s, which) => (s.%which%.show := "code", s)
+
+Test("Decide: show = code у каретки — плашка с кодом вместо флага", (*) => AssertEq(
+    (p := Core.Decide(Snap(), ShowCode(DefaultSettings(), "caret"), AllFlags).caret, {flag: p.flag, text: p.text, w: p.w}),
+    {flag: "", text: "RU", w: 16}))
+
+Test("Decide: show = code у мыши, каретка остаётся с флагом", (*) => AssertEq(
+    (r := Core.Decide({hkl: 0x04190419, caret: CaretRect(), caretDpi: 96, mouse: IBeam(), mouseDpi: 96, fullscreen: ""},
+        ShowCode(DefaultSettings(), "mouse"), AllFlags), r.caret.flag "/" r.mouse.flag "/" r.mouse.text), "ru//RU"))
+
+Test("Decide: плашка шире для длинного кода", (*) => AssertEq(
+    (s := ShowCode(DefaultSettings(), "caret"), s.layouts[0x04190419] := {flag: "", text: "РУС"},
+    Core.Decide(Snap(), s, AllFlags).caret.w), 21))
+
 ; --- флажок у мыши ---
 
 Test("мышь: по умолчанию справа снизу от видимой «I», отступ 3",

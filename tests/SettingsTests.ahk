@@ -56,6 +56,7 @@ ChangedSettings() {
     s.caret.sizeMin := 10
     s.caret.sizeMax := 24
     s.mouse.side := "left"
+    s.mouse.show := "code"
     s.mouse.size := 16
     s.layouts[0x04090409] := {flag: "gb", text: "EN"}
     s.layouts[0xF0020409] := {flag: "us", text: "DV"}
@@ -121,6 +122,7 @@ Test("Set: число вне пределов отброшено", (*) => Assert
 Test("Set: булево", (*) => AssertEq(SetAndShow("mouse.enabled", "false"), "1: 0"))
 Test("Set: сторона в любом регистре", (*) => AssertEq(SetAndShow("caret.side", "Top-Left"), '1: "top-left"'))
 Test("Set: вложенный путь", (*) => AssertEq(SetAndShow("caret.methods.uia", 0), "1: 0"))
+Test("Set: show — только flag или code", (*) => AssertEq(SetAndShow("caret.show", "emoji"), '0: "flag"'))
 Test("Set: неизвестный ключ", (*) => AssertEq(SettingsFile.Set(DefaultSettings(), "layouts", "x"), false))
 Test("Set: максимум не меньше минимума", (*) => (s := DefaultSettings(), SettingsFile.Set(s, "caret.sizeMin", 40),
     AssertEq(s.caret.sizeMax, 40)))
