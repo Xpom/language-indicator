@@ -109,6 +109,19 @@ class SettingsFile {
         return false
     }
 
+    ; Переопределение раскладки из окна: флаг — имя картинки или "-" (без флага), код — до 4 знаков.
+    ; Оба пустые — переопределение снимается. false — флаг негодный.
+    static SetLayout(s, hkl, flag, text) {
+        flag := StrLower(Trim(flag)), text := SubStr(Trim(StrReplace(text, "|")), 1, 4)
+        if !(flag ~= "^[a-z0-9_-]*$")
+            return false
+        if flag = "" && text = ""
+            s.layouts.Delete(hkl)
+        else
+            s.layouts[hkl] := {flag: flag, text: text}
+        return true
+    }
+
     ; Значение из строки по виду поля; "" — негодное
     static Parse(f, v) {
         switch f[4] {

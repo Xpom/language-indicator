@@ -5,9 +5,14 @@
 ;   ready                — страница загрузилась, пришлите состояние
 ;   set <путь> <значение> — изменить настройку (путь из SettingsFile.Fields)
 ;   autostart <1|0>      — включить или выключить автозапуск
+;   layout <HKL hex> <флаг> <код> — переопределить раскладку; оба пустые — как обычно
 ;   size <w> <h>         — размер содержимого в CSS-пикселях, окно подстраивается
 ;   min | close          — кнопки заголовка
-; AHK -> странице: JSON {type: "state", settings, autostart, layout: {flag, text}} — layout для предпросмотра
+; AHK -> странице: JSON {type: "state", settings, autostart,
+;   layout: {flag, text}                  — текущая раскладка, для предпросмотра
+;   layouts: [{hkl, name, auto, flag, text}] — установленные раскладки: auto — флаг и код без
+;                                           переопределения, flag и text — переопределение
+;   flags: [код]}                         — все картинки в flags
 ; Каждое изменение сразу применяется к app.settings и с короткой задержкой пишется в ini.
 
 #Include ..\lib\WebView2\WebView2.ahk
@@ -101,6 +106,13 @@ class SettingsPage {
                 if InStr(parts[2], "pollMs")
                     SettingsPage.app.StartTimers()
                 SetTimer(SettingsPage.saveFn, -SettingsPage.saveDelay)
+            case "layout":
+                if parts.Length < 4 || !SettingsFile.SetLayout(SettingsPage.app.settings, Integer("0x" parts[2]), parts[3], parts[4]) {
+                    SettingsPage.SendState()
+                    return
+                }
+                SetTimer(SettingsPage.saveFn, -SettingsPage.saveDelay)
+                SettingsPage.SendState()        ; у предпросмотра и списка мог смениться флаг
             case "autostart":
                 if !Autostart.Set(parts[2] = "1")
                     MsgBox(SettingsPage.Texts.autostartFailed, SettingsPage.Texts.title, "Icon!")
@@ -116,13 +128,26 @@ class SettingsPage {
     }
 
     static SendState() {
-        if SettingsPage.wv
-            SettingsPage.wv.PostWebMessageAsJson(Json.Stringify({
-                type: "state",
-                settings: SettingsPage.app.settings,
-                autostart: Autostart.IsEnabled(),
-                layout: Core.MapLayout(SettingsPage.app.snap.hkl, SettingsPage.app.hasFlagFn, SettingsPage.app.settings.layouts),
-            }))
+        if !SettingsPage.wv
+            return
+        app := SettingsPage.app, s := app.settings
+        layouts := []
+        for l in LayoutList.Installed() {
+            o := s.layouts.Has(l.hkl) ? s.layouts[l.hkl] : {flag: "", text: ""}
+            layouts.Push({hkl: Format("{:08X}", l.hkl), name: l.name, auto: Core.MapLayout(l.hkl, app.hasFlagFn),
+                flag: o.flag, text: o.text})
+        }
+        flags := []
+        for code in app.flagFiles
+            flags.Push(code)
+        SettingsPage.wv.PostWebMessageAsJson(Json.Stringify({
+            type: "state",
+            settings: s,
+            autostart: Autostart.IsEnabled(),
+            layout: Core.MapLayout(app.snap.hkl, app.hasFlagFn, s.layouts),
+            layouts: layouts,
+            flags: flags,
+        }))
     }
 
     ; Из опроса каретки: раскладка сменилась — предпросмотр на странице показывает новый флаг

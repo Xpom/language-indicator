@@ -126,3 +126,18 @@ Test("Set: show — только flag или code", (*) => AssertEq(SetAndShow("
 Test("Set: неизвестный ключ", (*) => AssertEq(SettingsFile.Set(DefaultSettings(), "layouts", "x"), false))
 Test("Set: максимум не меньше минимума", (*) => (s := DefaultSettings(), SettingsFile.Set(s, "caret.sizeMin", 40),
     AssertEq(s.caret.sizeMax, 40)))
+
+; --- переопределение раскладки из окна ---
+
+LayoutAfter(flag, text) {
+    s := DefaultSettings()
+    ok := SettingsFile.SetLayout(s, 0x04190419, flag, text)
+    return ok ": " Show(s.layouts)
+}
+
+Test("SetLayout: флаг и код", (*) => AssertEq(LayoutAfter("GB", " EN "), '1: {68748313: {"flag": "gb", "text": "EN"}}'))
+Test("SetLayout: без флага", (*) => AssertEq(LayoutAfter("-", ""), '1: {68748313: {"flag": "-", "text": ""}}'))
+Test("SetLayout: код обрезается до 4 знаков, | убирается", (*) => AssertEq(LayoutAfter("", "AB|CDEF"), '1: {68748313: {"flag": "", "text": "ABCD"}}'))
+Test("SetLayout: негодный флаг отброшен", (*) => AssertEq(LayoutAfter("../x", "RU"), "0: {}"))
+Test("SetLayout: оба пустые — переопределение снято", (*) => (s := DefaultSettings(), s.layouts[0x04190419] := {flag: "gb", text: ""},
+    SettingsFile.SetLayout(s, 0x04190419, "", ""), AssertEq(s.layouts.Count, 0)))
