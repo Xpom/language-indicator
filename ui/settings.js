@@ -19,12 +19,13 @@ const DEMO = {
   ],
   flags: ["by", "de", "eu", "fr", "gb", "gb-eng", "kz", "ru", "ua", "us"],
   systemLang: "ru",
+  about: { version: "0.1.0", links: { site: "", github: "https://github.com/Xpom/language-indicator", youtube: "", coffee: "" } },
 };
 
 // Тексты окна по языкам. Переведены русский и английский; остальные языки показывают английский
 const T = {
   ru: {
-    title: "Индикатор раскладки", sample: "Привет", more: "Дополнительно", minimize: "Свернуть", close: "Закрыть",
+    title: "Индикатор раскладки", sample: "Привет", site: "Сайт", guide: "Инструкция", coffee: "Кофе", soon: "Скоро", more: "Дополнительно", minimize: "Свернуть", close: "Закрыть",
     caret: "Каретка", mouse: "Мышь", shown: "Показывать", hidden: "Скрыто",
     gap: "Отступ", auto: "Автозапуск", autoOn: "С Windows", autoOff: "Выключен", opacity: "Непрозрачность",
     showFlag: "Показывать флаг", showCode: "Показывать код языка",
@@ -36,7 +37,7 @@ const T = {
     sides: { "top-left": "Сверху слева", top: "Сверху", "top-right": "Сверху справа", left: "Слева", right: "Справа", "bottom-left": "Снизу слева", bottom: "Снизу", "bottom-right": "Снизу справа" },
   },
   en: {
-    title: "Language Indicator", sample: "Hello", more: "Advanced", minimize: "Minimize", close: "Close",
+    title: "Language Indicator", sample: "Hello", site: "Website", guide: "Guide", coffee: "Coffee", soon: "Coming soon", more: "Advanced", minimize: "Minimize", close: "Close",
     caret: "Caret", mouse: "Mouse", shown: "Shown", hidden: "Hidden",
     gap: "Gap", auto: "Autostart", autoOn: "With Windows", autoOff: "Off", opacity: "Opacity",
     showFlag: "Show the flag", showCode: "Show the language code",
@@ -73,7 +74,7 @@ const I = {
   ibeam: `<svg width="9" height="20" viewBox="0 0 9 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1h2.5a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H1M8 1H5.5a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1H8"/></svg>`,
 };
 const G = { flag: "", gear: "", min: "", close: "", gap: "", auto: "", opacity: "" ,
-  full: "\uE740", poll: "\uE916", reset: "\uE777", down: "\uE70D", search: "\uE721", x: "\uE711", tick: "\uE73E", code: "\uE8D2", lang: "\uE774" };
+  full: "\uE740", poll: "\uE916", reset: "\uE777", down: "\uE70D", search: "\uE721", x: "\uE711", tick: "\uE73E", code: "\uE8D2", lang: "\uE774", coffee: "\uEC32" };
 const SIDES = ["top-left", "top", "top-right", "left", null, "right", "bottom-left", "bottom", "bottom-right"];
 // Пределы контролов (в ini пределы шире — см. SettingsFile.Fields)
 const SIZE = [8, 32], GAP = [0, 12], OPACITY = [10, 100], POLL = [15, 200], MOUSE_POLL = [10, 100], RADIUS = [0, 6], CODE_SCALE = [40, 90];
@@ -192,10 +193,27 @@ function Main() {
     <div class="card tile wide auto" id="au"><div class="titled"><span class="ico big-ico">${G.auto}</span><h4>${t("auto")}</h4></div>
       <div class="row"><small>${state.autostart ? t("autoOn") : t("autoOff")}</small><div class="toggle ${state.autostart ? "on" : ""}"></div></div></div>
     <div class="card hsl full"><div class="head"><span class="ico">${G.opacity}</span><b>${t("opacity")}</b><span class="sp"></span><small>${s.opacity}%</small></div>${track("op", s.opacity, OPACITY)}</div>
+    ${About()}
+  </div>`;
+}
+
+// О проекте: ссылки открывает AHK во внешнем браузере; ссылки без адреса — «скоро»
+function About() {
+  const links = state.about.links;
+  const a = (key, icon, label, cls = "") => `<a class="${cls} ${links[key] ? "" : "soon"}" data-link="${key}" title="${links[key] || t("soon")}">${icon}${label}</a>`;
+  return `<div class="card about full">
+    <div class="links">
+      ${a("site", `<span class="ico">${G.lang}</span>`, t("site"))}
+      ${a("github", `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>`, "GitHub")}
+      ${a("youtube", `<svg viewBox="0 0 24 24"><rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#ff0033"/><path d="M10 9v6l5.2-3z" fill="#fff"/></svg>`, t("guide"))}
+      ${a("coffee", `<span class="ico">${G.coffee}</span>`, t("coffee"), "coffee")}
+    </div>
+    <div class="copy"><span>© 2026 Xpom</span><span>v${state.about.version}</span></div>
   </div>`;
 }
 
 function bindMain(app) {
+  app.querySelectorAll("[data-link]").forEach(el => el.onclick = () => { if (state.about.links[el.dataset.link]) send("open", el.dataset.link); });
   app.querySelectorAll("[data-chk]").forEach(el => el.onclick = () => set(el.dataset.chk + ".enabled", !get(el.dataset.chk + ".enabled")));
   app.querySelectorAll("[data-show] [data-v]").forEach(el => el.onclick = () => set(el.parentNode.dataset.show + ".show", el.dataset.v));
   app.querySelectorAll("[data-grid] [data-side]").forEach(el => el.onclick = () => set(el.parentNode.dataset.grid + ".side", el.dataset.side));

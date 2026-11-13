@@ -7,13 +7,15 @@
 ;   autostart <1|0>      — включить или выключить автозапуск
 ;   layout <HKL hex> <флаг> <код> — переопределить раскладку; оба пустые — как обычно
 ;   size <w> <h>         — размер содержимого в CSS-пикселях, окно подстраивается
+;   open <ссылка>        — открыть ссылку из Links во внешнем браузере
 ;   min | close          — кнопки заголовка
 ; AHK -> странице: JSON {type: "state", settings, autostart,
 ;   layout: {flag, text}                  — текущая раскладка, для предпросмотра
 ;   layouts: [{hkl, name, auto, flag, text}] — установленные раскладки: auto — флаг и код без
 ;                                           переопределения, flag и text — переопределение
 ;   flags: [код],                         — все картинки в flags
-;   systemLang: "ru"}                     — язык интерфейса Windows (для uiLang = auto)
+;   systemLang: "ru",                     — язык интерфейса Windows (для uiLang = auto)
+;   about: {version, links: {имя: адрес}}} — для плитки «О проекте»; пустой адрес — ссылки пока нет
 ; Каждое изменение сразу применяется к app.settings и с короткой задержкой пишется в ini.
 
 #Include ..\lib\WebView2\WebView2.ahk
@@ -25,6 +27,13 @@ class SettingsPage {
         autostartFailed: "Не удалось изменить автозапуск: для этого программа должна работать с правами администратора.",
     }
     static host := "app.language-indicator.example"
+    ; Ссылки плитки «О проекте». Страница открывает их только по имени — сама адресов не задаёт
+    static Links := Map(
+        "site", "",         ; сайт проекта — пока нет
+        "github", "https://github.com/Xpom/language-indicator",
+        "youtube", "",      ; видеоинструкция — пока нет
+        "coffee", "",       ; «купить кофе» — пока нет
+    )
     static saveDelay := 400
 
     static gui := ""
@@ -118,6 +127,9 @@ class SettingsPage {
                 if !Autostart.Set(parts[2] = "1")
                     MsgBox(SettingsPage.Texts.autostartFailed, SettingsPage.Texts.title, "Icon!")
                 SettingsPage.SendState()
+            case "open":
+                if parts.Length >= 2 && SettingsPage.Links.Has(parts[2]) && SettingsPage.Links[parts[2]] != ""
+                    Run(SettingsPage.Links[parts[2]])
             case "size":
                 SettingsPage.Resize(parts[2], parts[3])
             case "min":
@@ -148,6 +160,7 @@ class SettingsPage {
             layout: Core.MapLayout(app.snap.hkl, app.hasFlagFn, s.layouts),
             layouts: layouts,
             flags: flags,
+            about: {version: app.version, links: SettingsPage.Links},
             systemLang: StrLower(Locale.Language(Locale.NameFromLangId(DllCall("GetUserDefaultUILanguage", "ushort")))),
         }))
     }

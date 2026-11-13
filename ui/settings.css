@@ -198,3 +198,16 @@ svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width:
 .dd-list .it.sel { color: var(--accent); font-weight: 600; }
 .dd-list .it small { color: var(--muted); margin-left: auto; }
 .dd-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+
+/* О проекте */
+.about { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.about .links { display: flex; gap: 6px; }
+.about a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; border-radius: 9px; color: var(--ink); text-decoration: none; font-size: 10.5px; cursor: pointer; }
+.about a:hover { background: var(--field); }
+.about a.soon { opacity: .4; cursor: default; }
+.about a.soon:hover { background: none; }
+.about a svg, .about a .ico { width: 20px; height: 20px; font-size: 18px; }
+.about a.coffee { background: #ffdd57; color: #3b2a00; }
+.about a.coffee:hover { background: #ffd23a; }
+.about a.coffee.soon { opacity: .55; }
+.about .copy { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); }

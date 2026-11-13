@@ -39,6 +39,7 @@ DllCall("SetThreadDpiAwarenessContext", "ptr", -4, "ptr")
 App.Start()
 
 class App {
+    static version := "0.1.0"
     static settings := ""
     static settingsPath := A_ScriptDir "\settings.ini"
     static flagFiles := Map()
