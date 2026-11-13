@@ -7,7 +7,7 @@
 ;   autostart <1|0>      — включить или выключить автозапуск
 ;   size <w> <h>         — размер содержимого в CSS-пикселях, окно подстраивается
 ;   min | close          — кнопки заголовка
-; AHK -> странице: JSON {type: "state", settings, autostart}
+; AHK -> странице: JSON {type: "state", settings, autostart, layout: {flag, text}} — layout для предпросмотра
 ; Каждое изменение сразу применяется к app.settings и с короткой задержкой пишется в ini.
 
 #Include ..\lib\WebView2\WebView2.ahk
@@ -27,6 +27,7 @@ class SettingsPage {
     static app := ""
     static onMessage := ""
     static saveFn := ""
+    static lastHkl := 0
 
     ; app: {settings, settingsPath, StartTimers()}
     static Open(app) {
@@ -120,7 +121,16 @@ class SettingsPage {
                 type: "state",
                 settings: SettingsPage.app.settings,
                 autostart: Autostart.IsEnabled(),
+                layout: Core.MapLayout(SettingsPage.app.snap.hkl, SettingsPage.app.hasFlagFn, SettingsPage.app.settings.layouts),
             }))
+    }
+
+    ; Из опроса каретки: раскладка сменилась — предпросмотр на странице показывает новый флаг
+    static LayoutTick(hkl) {
+        if SettingsPage.wv && hkl != SettingsPage.lastHkl {
+            SettingsPage.lastHkl := hkl
+            SettingsPage.SendState()
+        }
     }
 
     static Save() {

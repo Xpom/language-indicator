@@ -52,3 +52,53 @@ svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width:
 
 /* Выключенные каретка или мышь гасят свои плитки */
 .off { opacity: .35; filter: grayscale(1); pointer-events: none; }
+
+/* Предпросмотр: строка с кареткой и курсор IBEAM с флажками */
+.pv { position: relative; border-radius: 10px; overflow: hidden; }
+.pv .line { position: absolute; left: 16px; top: 22px; font: 15px "Segoe UI", sans-serif; white-space: nowrap; color: #fff; }
+.pv .caret { display: inline-block; width: 1px; height: 18px; background: #fff; vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.pv .ibeam { position: absolute; color: #fff; }
+.flag { position: absolute; box-shadow: 0 0 0 1px rgba(0,0,0,.35); background: #3c4043 center/cover; pointer-events: none; display: flex; align-items: center; justify-content: center; font: 700 9px "Segoe UI"; color: #fff; }
+.ct { display: block; line-height: 1; text-box: trim-both cap alphabetic; }
+
+/* Плитка предпросмотра — второй акцент */
+.hero { grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(135deg, var(--hero-1), var(--hero-2)); color: #fff; padding: 10px; }
+.hero .pv { flex: 1; min-height: 120px; background: rgba(255,255,255,.16); }
+.pos { display: flex; justify-content: space-between; }
+.side-grid { display: grid; grid-template-columns: repeat(3, 18px); grid-template-rows: repeat(3, 14px); gap: 3px; }
+.side-grid span { border-radius: 3px; background: rgba(255,255,255,.28); cursor: pointer; }
+.side-grid span:not(.mid):hover { background: rgba(255,255,255,.55); }
+.side-grid span.sel { background: #fff; }
+.side-grid span.mid { background: transparent; cursor: default; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; }
+
+/* Вертикальные ползунки размера */
+.vsl { grid-row: span 2; padding: 0; overflow: hidden; position: relative; cursor: ns-resize; min-height: 150px; touch-action: none; }
+.vsl .fill { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(180deg, #6aaaf0, #4a8fe0); }
+.vsl .head { position: absolute; left: 0; right: 0; top: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.vsl .head svg { font-size: 20px; color: var(--ink); }
+.vsl .head .v { font: 11px Consolas, monospace; color: var(--muted); }
+
+.titled { display: flex; align-items: center; gap: 10px; }
+.titled .big-ico { font-size: 22px; color: var(--accent); }
+.stepper { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.stepper .who { width: 18px; font-size: 16px; color: var(--muted); display: flex; justify-content: center; }
+.stepper button { width: 24px; height: 24px; border-radius: 7px; border: 0; background: var(--field); color: var(--ink); cursor: pointer; font-size: 14px; }
+.stepper button:hover { background: var(--off); }
+.stepper .v { flex: 1; text-align: center; font: 12px Consolas, monospace; }
+.auto { display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; }
+.auto .row { display: flex; align-items: center; justify-content: space-between; }
+.toggle { width: 38px; height: 22px; border-radius: 11px; background: var(--off); position: relative; cursor: pointer; flex: none; transition: background .15s; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--knob); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s; }
+.toggle.on { background: var(--accent); }
+.toggle.on::after { left: 19px; }
+
+.hsl { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.hsl .head { display: flex; align-items: center; gap: 10px; }
+.hsl .head .ico { font-size: 18px; color: var(--accent); }
+.hsl .head .sp { flex: 1; }
+.hsl .head small { color: var(--muted); font: 12px Consolas, monospace; }
+.track { position: relative; height: 6px; border-radius: 3px; background: var(--off); cursor: pointer; touch-action: none; }
+.track::before { content: ""; position: absolute; inset: -8px 0; }
+.track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
+.track .knob { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--accent); border: 3px solid var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.3); }

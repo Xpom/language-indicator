@@ -83,6 +83,7 @@ class App {
         preview := SettingsWindow.PreviewAnchor("caret")
         caret := IsObject(preview) ? preview : CaretProbe.Find(App.settings.caret.methods)
         App.snap.hkl := LayoutProbe.Foreground()
+        SettingsPage.LayoutTick(App.snap.hkl)
         App.snap.caret := caret
         App.snap.caretDpi := IsObject(caret) ? MonitorProbe.DpiAt(caret.x, caret.y) : 96
         App.snap.fullscreen := App.settings.hideFullscreen ? FullscreenProbe.Foreground() : ""
