@@ -7,14 +7,16 @@ class LayoutProbe {
         hwnd := DllCall("GetForegroundWindow", "ptr")
         if !hwnd
             return 0
-        ; Консоль (conhost): у окна подставной поток клиента (cmd, powershell), и раскладка
-        ; для него — 0 или устаревшая. Настоящий поток окна (conhost) знает его окно IME.
-        if WinGetClass(hwnd) = "ConsoleWindowClass" {
-            ime := DllCall("imm32\ImmGetDefaultIMEWnd", "ptr", hwnd, "ptr")
-            hwnd := ime ? ime : hwnd
-        }
-        tid := DllCall("GetWindowThreadProcessId", "ptr", hwnd, "ptr", 0, "uint")
-        return DllCall("GetKeyboardLayout", "uint", tid, "ptr") & 0xFFFFFFFF
+        ; У консоли раскладка подставного потока клиента — 0 или устаревшая, см. WindowThread
+        return DllCall("GetKeyboardLayout", "uint", LayoutProbe.WindowThread(hwnd), "ptr") & 0xFFFFFFFF
+    }
+
+    ; Поток, который на самом деле ведёт окно. У консоли (conhost) GetWindowThreadProcessId
+    ; отдаёт подставной поток клиента (cmd, powershell); настоящий — у окна IME консоли.
+    static WindowThread(hwnd) {
+        if WinGetClass(hwnd) = "ConsoleWindowClass" && (ime := DllCall("imm32\ImmGetDefaultIMEWnd", "ptr", hwnd, "ptr"))
+            hwnd := ime
+        return DllCall("GetWindowThreadProcessId", "ptr", hwnd, "ptr", 0, "uint")
     }
 }
 
@@ -48,7 +50,8 @@ class CaretProbe {
         hwnd := DllCall("GetForegroundWindow", "ptr")
         if !hwnd
             return ""
-        tid := DllCall("GetWindowThreadProcessId", "ptr", hwnd, "ptr", 0, "uint")
+        ; У консоли — поток conhost: у потока cmd окон нет, и GetGUIThreadInfo для него не работает
+        tid := LayoutProbe.WindowThread(hwnd)
         gti := Buffer(8 + 6 * A_PtrSize + 16, 0)
         NumPut("uint", gti.Size, gti)
         return DllCall("GetGUIThreadInfo", "uint", tid, "ptr", gti) ? gti : ""
