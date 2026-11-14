@@ -6,7 +6,7 @@
 ;@Ahk2Exe-SetDescription Language Indicator
 ;@Ahk2Exe-SetCompanyName Xpom
 ;@Ahk2Exe-SetCopyright (c) 2026 Xpom (MIT)
-;@Ahk2Exe-SetVersion 0.1.0
+;@Ahk2Exe-SetVersion 0.1.1
 #SingleInstance Force
 Persistent
 
@@ -50,7 +50,7 @@ DllCall("SetThreadDpiAwarenessContext", "ptr", -4, "ptr")
 App.Start()
 
 class App {
-    static version := "0.1.0"          ; при смене — и ;@Ahk2Exe-SetVersion вверху (сборка сверяет)
+    static version := "0.1.1"          ; при смене — и ;@Ahk2Exe-SetVersion вверху (сборка сверяет)
     static settings := ""
     static settingsPath := SettingsFile.PathFor(A_ScriptDir, A_IsCompiled, FileExist(A_ScriptDir "\portable"), A_AppData)
     static flagFiles := Map()

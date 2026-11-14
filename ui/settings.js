@@ -20,7 +20,7 @@ const DEMO = {
   flags: ["by", "de", "eu", "fr", "gb", "gb-eng", "kz", "ru", "ua", "us"],
   systemLang: "ru",
   update: { status: "available", version: "0.2.0", error: "", portable: false },
-  about: { version: "0.1.0", links: { site: "", github: "https://github.com/Xpom/language-indicator", youtube: "", coffee: "" } },
+  about: { version: "0.1.1", links: { site: "", github: "https://github.com/Xpom/language-indicator", youtube: "", coffee: "" } },
 };
 
 // Тексты окна по языкам. Переведены русский и английский; остальные языки показывают английский
