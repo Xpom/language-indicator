@@ -25,3 +25,4 @@ Test("Без автообновления: уже сообщали об этой
 Test("Без автообновления: сообщали о прошлой — сообщить снова", (*) => AssertEq(Updater.Decide(UpdState({auto: false, notified: "0.1.5"})), "notify"))
 Test("Портабельная: только сообщить", (*) => AssertEq(Updater.Decide(UpdState({portable: true, startup: true})), "notify"))
 Test("Без прав администратора: только сообщить", (*) => AssertEq(Updater.Decide(UpdState({admin: false, startup: true})), "notify"))
+Test("Обновление: с тестовой сборки на релиз", (*) => AssertEq(Updater.Decide(UpdState({current: "0.1.1-test.2", available: "0.1.1", startup: true})), "install"))

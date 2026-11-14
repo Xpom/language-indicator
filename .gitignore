@@ -3,3 +3,4 @@ settings.ini
 dist/
 build/.tools/
 build/.keys/
+LanguageIndicator.build.ahk

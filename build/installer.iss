@@ -8,6 +8,10 @@
 #ifndef SourceDir
   #error Передайте /DSourceDir
 #endif
+; Номер файла установщика — только цифры (у тестовой сборки AppVersion с суффиксом -test.N)
+#ifndef FileVersion
+  #define FileVersion AppVersion
+#endif
 
 #define AppName "Language Indicator"
 #define AppExe "LanguageIndicator.exe"
@@ -23,7 +27,7 @@ AppPublisher=Xpom
 AppPublisherURL=https://github.com/Xpom/language-indicator
 AppSupportURL=https://github.com/Xpom/language-indicator/issues
 AppUpdatesURL=https://github.com/Xpom/language-indicator/releases
-VersionInfoVersion={#AppVersion}
+VersionInfoVersion={#FileVersion}
 DefaultDirName={autopf}\LanguageIndicator
 DisableProgramGroupPage=yes
 DisableDirPage=auto

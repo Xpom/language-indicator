@@ -2,6 +2,9 @@
 #   powershell -ExecutionPolicy Bypass -File build\build.ps1
 # Нужны AutoHotkey v2 (база для exe) и Inno Setup 6; Ahk2Exe скрипт скачивает сам в build\.tools.
 # Пути к инструментам можно задать переменными окружения AHK_BASE и ISCC.
+# Тестовая (не релизная) сборка — только с суффиксом версии, исходники не меняются:
+#   powershell -ExecutionPolicy Bypass -File build\build.ps1 -Suffix test.1   → версия 0.1.1-test.1
+param([string] $Suffix = '')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $dist = Join-Path $root 'dist'
@@ -22,6 +25,12 @@ $version = [regex]::Match($main, 'static version := "([^"]+)"').Groups[1].Value
 $exeVersion = [regex]::Match($main, ';@Ahk2Exe-SetVersion (\S+)').Groups[1].Value
 if (-not $version) { throw 'Не нашёл App.version' }
 if ($version -ne $exeVersion) { throw "App.version $version не совпадает с ;@Ahk2Exe-SetVersion $exeVersion" }
+# Номер файла (VERSIONINFO) — только цифры; полный номер с суффиксом — в программе и именах файлов
+$fileVersion = $version
+if ($Suffix) {
+    if ($Suffix -notmatch '^[0-9A-Za-z]+(\.[0-9A-Za-z]+)*$') { throw "Негодный суффикс: $Suffix" }
+    $version = "$version-$Suffix"
+}
 Write-Host "Версия $version"
 
 # --- инструменты ---
@@ -44,7 +53,20 @@ if (Test-Path $dist) { Remove-Item $dist -Recurse -Force }
 $app = Join-Path $dist 'app'
 New-Item -ItemType Directory -Force $app | Out-Null
 $exe = Join-Path $app 'LanguageIndicator.exe'
-$p = Start-Process $ahk2exe -ArgumentList @('/in', "`"$root\LanguageIndicator.ahk`"", '/out', "`"$exe`"", '/base', "`"$base`"", '/silent', 'verbose') -Wait -PassThru -NoNewWindow
+# С суффиксом компилируется копия главного скрипта с полным номером версии — рядом с оригиналом,
+# чтобы работали относительные #Include
+$source = Join-Path $root 'LanguageIndicator.ahk'
+if ($Suffix) {
+    $source = Join-Path $root 'LanguageIndicator.build.ahk'
+    $patched = $main.Replace("static version := `"$fileVersion`"", "static version := `"$version`"")
+    $patched = $patched.Replace(";@Ahk2Exe-SetVersion $fileVersion", ";@Ahk2Exe-SetVersion $fileVersion`n;@Ahk2Exe-SetProductVersion $version")
+    [IO.File]::WriteAllText($source, $patched, (New-Object Text.UTF8Encoding $true))
+}
+try {
+    $p = Start-Process $ahk2exe -ArgumentList @('/in', "`"$source`"", '/out', "`"$exe`"", '/base', "`"$base`"", '/silent', 'verbose') -Wait -PassThru -NoNewWindow
+} finally {
+    if ($Suffix) { Remove-Item $source -ErrorAction SilentlyContinue }
+}
 if ($p.ExitCode -ne 0 -or -not (Test-Path $exe)) { throw "Ahk2Exe завершился с кодом $($p.ExitCode)" }
 
 Copy-Item (Join-Path $root 'ui') $app -Recurse
@@ -65,7 +87,7 @@ if ($LASTEXITCODE -ne 0) { throw "tar завершился с кодом $LASTEX
 Remove-Item (Join-Path $dist 'portable') -Recurse -Force
 
 # --- установщик ---
-& $iscc "/DAppVersion=$version" "/DSourceDir=$app" "/O$dist" (Join-Path $PSScriptRoot 'installer.iss') | Out-Host
+& $iscc "/DAppVersion=$version" "/DFileVersion=$fileVersion" "/DSourceDir=$app" "/O$dist" (Join-Path $PSScriptRoot 'installer.iss') | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "ISCC завершился с кодом $LASTEXITCODE" }
 
 # --- описание релиза для обновления из программы: имена, размеры и суммы файлов ---

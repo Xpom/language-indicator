@@ -42,7 +42,7 @@ class Release {
     ; Разбор release.json: {version, files: Map(вид → {name, size, sha256})}. Негодное описание — исключение.
     static Parse(text) {
         j := Json.Parse(text)
-        if !(j is Map) || !j.Has("version") || !RegExMatch(j["version"], "^\d+\.\d+\.\d+$")
+        if !(j is Map) || !j.Has("version") || !RegExMatch(j["version"], Release.versionRe)
             throw ValueError("release.json: нет версии")
         if !j.Has("files") || !(j["files"] is Map)
             throw ValueError("release.json: нет файлов")
@@ -56,16 +56,35 @@ class Release {
         return {version: j["version"], files: files}
     }
 
-    ; Сравнение версий X.Y.Z: -1, 0, 1. Негодная строка считается меньше любой годной.
+    ; Номер версии: X.Y.Z у релиза, X.Y.Z-суффикс у тестовой сборки (например 0.1.1-test.2)
+    static versionRe := "^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*))?$"
+
+    ; Сравнение версий по semver: -1, 0, 1. Сборка с суффиксом старше своего релиза
+    ; (0.1.1-test.1 < 0.1.1), но новее предыдущего (0.1.0 < 0.1.1-test.1).
+    ; Негодная строка считается меньше любой годной.
     static Compare(a, b) {
-        ok := (v) => RegExMatch(v, "^\d+\.\d+\.\d+$")
-        if !ok(a) || !ok(b)
-            return ok(a) - ok(b)
-        pa := StrSplit(a, "."), pb := StrSplit(b, ".")
+        okA := RegExMatch(a, Release.versionRe, &ma), okB := RegExMatch(b, Release.versionRe, &mb)
+        if !okA || !okB
+            return !!okA - !!okB
         loop 3
-            if Integer(pa[A_Index]) != Integer(pb[A_Index])
-                return Integer(pa[A_Index]) > Integer(pb[A_Index]) ? 1 : -1
-        return 0
+            if Integer(ma[A_Index]) != Integer(mb[A_Index])
+                return Integer(ma[A_Index]) > Integer(mb[A_Index]) ? 1 : -1
+        if ma[4] = "" || mb[4] = ""
+            return (ma[4] = "") - (mb[4] = "")
+        ; Суффиксы — по частям через точку: числа как числа, числа раньше слов, короче — раньше
+        pa := StrSplit(ma[4], "."), pb := StrSplit(mb[4], ".")
+        loop Min(pa.Length, pb.Length) {
+            x := pa[A_Index], y := pb[A_Index]
+            if IsDigit(x) && IsDigit(y) {
+                if Integer(x) != Integer(y)
+                    return Integer(x) > Integer(y) ? 1 : -1
+            } else if IsDigit(x) != IsDigit(y) {
+                return IsDigit(x) ? -1 : 1
+            } else if StrCompare(x, y, true) {
+                return StrCompare(x, y, true) > 0 ? 1 : -1
+            }
+        }
+        return (pa.Length > pb.Length) - (pa.Length < pb.Length)
     }
 
     static FromBase64(s) {

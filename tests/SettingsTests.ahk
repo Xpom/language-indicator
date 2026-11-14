@@ -174,3 +174,8 @@ notifiedVersion=0.2.0
 lastRunVersion=bad
 feed=http://127.0.0.1:8765/latest.json
 )")).update, {notifiedVersion: "0.2.0", lastRunVersion: "", feed: "http://127.0.0.1:8765/latest.json"}))
+Test("ini: версия тестовой сборки в служебных значениях", (*) => AssertEq(SettingsFile.Load(TempIni("
+(
+[Update]
+lastRunVersion=0.1.1-test.2
+)")).update.lastRunVersion, "0.1.1-test.2"))

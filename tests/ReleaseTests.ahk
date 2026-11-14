@@ -38,6 +38,12 @@ Test("Версии: 0.10.0 > 0.9.0", (*) => AssertEq(Release.Compare("0.10.0", "
 Test("Версии: равные", (*) => AssertEq(Release.Compare("1.2.3", "1.2.3"), 0))
 Test("Версии: меньше по патчу", (*) => AssertEq(Release.Compare("1.2.3", "1.2.4"), -1))
 Test("Версии: негодная меньше годной", (*) => AssertEq(Release.Compare("v1", "0.0.1"), -1))
+Test("Версии: тестовая сборка новее прошлого релиза", (*) => AssertEq(Release.Compare("0.1.1-test.1", "0.1.0"), 1))
+Test("Версии: тестовая сборка старше своего релиза", (*) => AssertEq(Release.Compare("0.1.1-test.1", "0.1.1"), -1))
+Test("Версии: тестовые сборки по номеру, 10 > 2", (*) => AssertEq(Release.Compare("0.1.1-test.10", "0.1.1-test.2"), 1))
+Test("Версии: тестовые сборки равны", (*) => AssertEq(Release.Compare("0.1.1-test.2", "0.1.1-test.2"), 0))
+Test("Версии: суффикс без номера — старше суффикса с номером", (*) => AssertEq(Release.Compare("0.1.1-test", "0.1.1-test.1"), -1))
+Test("release.json: версия тестовой сборки", (*) => AssertEq(Release.Parse('{"version":"0.1.1-test.1","files":{}}').version, "0.1.1-test.1"))
 
 StrRepeat(s, n) {
     out := ""

@@ -61,7 +61,7 @@ class SettingsFile {
     ; По этой таблице настройки читаются из ini, пишутся в него и меняются из окна настроек.
     ; Виды: num — целое в пределах [lo, hi]; bool; side — сторона из sides; enum — одно из слов lo;
     ;       color — #rrggbb или none; font — имя шрифта (латиница, цифры, пробел, - и _);
-    ;       version — X.Y.Z; url — http(s)-адрес.
+    ;       version — X.Y.Z или X.Y.Z-test.N (Release.versionRe); url — http(s)-адрес.
     static Fields := [
         ["opacity",             "General",  "opacity",        "num", 10, 100],
         ["hideFullscreen",      "General",  "hideFullscreen", "bool"],
@@ -175,7 +175,7 @@ class SettingsFile {
             case "font":
                 return v ~= "^[A-Za-z0-9 _-]{1,40}$" ? v : ""
             case "version":
-                return v ~= "^\d+\.\d+\.\d+$" ? v : ""
+                return v ~= Release.versionRe ? v : ""
             case "url":
                 return v ~= "^https?://\S+$" ? v : ""
             case "side", "enum":
