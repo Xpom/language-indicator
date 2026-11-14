@@ -22,7 +22,7 @@
 
 ### «Windows защитила ваш компьютер»
 
-Программа пока не подписана сертификатом разработчика, поэтому SmartScreen может предупредить при первом запуске. Нажмите **«Подробнее» → «Выполнить в любом случае»**. Исходный код открыт, а сборки делает GitHub Actions прямо из этого репозитория.
+Программа пока не подписана сертификатом разработчика, поэтому SmartScreen может предупредить при первом запуске. Нажмите **«Подробнее» → «Выполнить в любом случае»**. Исходный код открыт, а сборки делает GitHub Actions прямо из этого репозитория. Как программа будет подписываться — в разделе [Code signing policy](#code-signing-policy).
 
 ### Права администратора
 
@@ -41,6 +41,27 @@
 ## Приватность
 
 Программа ничего не отправляет о вас и о том, что вы печатаете. Она не читает текст: ей нужны только раскладка и координаты каретки. Единственное обращение в сеть — проверка обновлений: обычный запрос к `api.github.com` и скачивание файлов релиза с GitHub.
+
+## Code signing policy
+
+*Политика подписи кода. Программа пока не подписана: заявка в SignPath Foundation подаётся, раздел написан под её условия.*
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+- Only binaries built by [GitHub Actions](.github/workflows/release.yml) from the source code of this repository are signed: `LanguageIndicator.exe` and the installer `LanguageIndicator-Setup-X.Y.Z.exe`.
+- Every release is approved for signing manually.
+- Third-party components bundled with the program (see [License](#лицензия)) are open source under the MIT licence and are not signed with this project's certificate.
+
+**Team roles**
+
+- Committers and reviewers: [Xpom](https://github.com/Xpom)
+- Approvers: [Xpom](https://github.com/Xpom)
+
+All team members use multi-factor authentication for GitHub and SignPath.
+
+**Privacy policy**
+
+This program does not collect or transfer any personal data and never reads the text you type: it only needs the current keyboard layout and the caret position. Its only network activity is checking for updates: a request to `api.github.com` for the latest release of this repository and, when an update is installed, downloading the release files from GitHub. No identifiers or usage data are sent. See also [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
 
 ## Сборка из исходников
 
