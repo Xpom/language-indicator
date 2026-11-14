@@ -127,14 +127,15 @@ function place(side, ax, ay, aw, ah, fw, fh, gap) {
   const L = ax - gap - fw, R = ax + aw + gap, Tp = ay - gap - fh, B = ay + ah + gap, mid = ay + (ah - fh) / 2;
   return { "top-left": [L, Tp], top: [ax, Tp], "top-right": [R, Tp], left: [L, mid], right: [R, mid], "bottom-left": [L, B], bottom: [ax, B], "bottom-right": [R, B] }[side];
 }
-// Вид плашки кода — как FlagOverlay: цвет букв по яркости фона, без фона — белые с обводкой
-function codeStyle(h) {
+// Вид плашки кода — как FlagOverlay: цвет букв по яркости фона, без фона — белые с обводкой.
+// r — скругление в пикселях образца (по умолчанию — как на экране, cornerRadius)
+function codeStyle(h, r = state.settings.cornerRadius) {
   const c = state.settings.code, none = c.bg === "none";
   const n = none ? 0 : parseInt(c.bg.slice(1), 16), y = 0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255);
   return `background:${none ? "transparent" : c.bg};box-shadow:${none ? "none" : "0 0 0 1px rgba(0,0,0,.35)"};` +
     `color:${!none && y > 160 ? "#1d2430" : "#fff"};text-shadow:${none ? "0 0 2px #000,0 0 2px #000,0 0 1px #000" : "none"};` +
     `font-family:'${c.font}';font-weight:${c.font === "Segoe UI" ? 700 : 400};font-size:${Math.round(h * c.scale / 100)}px;` +
-    `border-radius:${state.settings.cornerRadius * h / 12}px`;
+    `border-radius:${r}px`;
 }
 // Ширина плашки кода — как Core.CodeWidth
 const codeWidth = (h, text) => Math.max(h * 4 / 3, h * (0.42 * text.length + 0.5));
@@ -146,7 +147,7 @@ function putFlag(box, ind, a) {
   f.className = "flag";
   if (!flag) f.style.cssText = codeStyle(h);
   Object.assign(f.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px", opacity: get("opacity") / 100 });
-  if (flag) Object.assign(f.style, { backgroundImage: `url(${flagUrl(flag)})`, borderRadius: get("cornerRadius") * h / 12 + "px" });
+  if (flag) Object.assign(f.style, { backgroundImage: `url(${flagUrl(flag)})`, borderRadius: get("cornerRadius") + "px" });
   else f.innerHTML = `<span class="ct">${lay.text}</span>`;
   box.appendChild(f);
 }
@@ -280,13 +281,14 @@ function Side() {
 
 // Плитки «Флажок» и «Код» с крупными образцами; на «Коде» без подписей: фон, шрифт, размер букв
 function Pair() {
-  const s = state.settings, lay = state.layout, big = 39;
+  // Крупные образцы — флажок у каретки в увеличении: скругление увеличено в том же масштабе
+  const s = state.settings, lay = state.layout, big = 39, bigR = s.cornerRadius * big / s.caret.size;
   const sw = b => `<span data-bg="${b}" class="${b === "none" ? "empty" : ""} ${b === s.code.bg ? "sel" : ""}" style="${b === "none" ? "" : "background:" + b}" title="${b === "none" ? t("noBg") : b}"></span>`;
   return `<div class="pair">
     <div class="card tile"><div class="titled"><span class="ico">${G.flag}</span><h4>${t("flagT")}</h4></div>
-      <div class="pv-big">${lay.flag ? `<div class="f" style="border-radius:${s.cornerRadius * big / 12}px;background-image:url(${flagUrl(lay.flag)})"></div>` : ""}</div></div>
+      <div class="pv-big">${lay.flag ? `<div class="f" style="border-radius:${bigR}px;background-image:url(${flagUrl(lay.flag)})"></div>` : ""}</div></div>
     <div class="card tile"><div class="titled"><span class="ico">${G.code}</span><h4>${t("codeT")}</h4></div>
-      <div class="pv-big"><div class="c" style="${codeStyle(big)}"><span class="ct">${lay.text}</span></div></div>
+      <div class="pv-big"><div class="c" style="${codeStyle(big, bigR)}"><span class="ct">${lay.text}</span></div></div>
       <div class="swatches">${BGS.map(sw).join("")}<label class="${BGS.includes(s.code.bg) ? "" : "sel"}" title="${t("customColor")}"><input type="color" id="bgc" value="${s.code.bg === "none" ? "#3c4043" : s.code.bg}"></label></div>
       <select class="sel-font" id="font">${FONTS.map(f => `<option ${f === s.code.font ? "selected" : ""} style="font-family:'${f}'">${f}</option>`).join("")}</select>
       <div class="fsr" title="${t("codeSize")}: ${s.code.scale}%"><span style="font-size:10px">A</span>${track("fs", s.code.scale, CODE_SCALE)}<span style="font-size:16px">A</span></div>

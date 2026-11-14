@@ -54,7 +54,7 @@ class Core {
         w := Round((flag != "" ? size * 4 / 3 : Core.CodeWidth(size, ind.text)) * scale)
         pos := Core.Place(anchor, s.side, Round(s.gap * scale), w, h)
         return {flag: flag, text: ind.text, x: pos.x, y: pos.y, w: w, h: h,
-            alpha: Round(all.opacity * 255 / 100), radius: all.cornerRadius * h / 12,
+            alpha: Round(all.opacity * 255 / 100), radius: Round(all.cornerRadius * scale),
             bg: all.code.bg, font: all.code.font, scale: all.code.scale}
     }
 
