@@ -38,6 +38,11 @@ class SettingsPage {
         "coffee", "",       ; «купить кофе» — пока нет
     )
     static saveDelay := 400
+    ; Закрытое окно прячется и живёт ещё 10 минут: новый WebView2 сразу после старого ждёт
+    ; завершения его процесса браузера (до 5 с), а спрятанное окно открывается мгновенно
+    static keepMs := 10 * 60 * 1000
+    static hidden := false
+    static destroyFn := ObjBindMethod(SettingsPage, "Destroy")
 
     static gui := ""
     static wvc := ""
@@ -48,8 +53,17 @@ class SettingsPage {
     static lastHkl := 0
 
     ; app: {settings, settingsPath, StartTimers()}
+    ; Окно на экране (спрятанное после закрытия не считается)
+    static IsOpen() => SettingsPage.gui && !SettingsPage.hidden
+
     static Open(app) {
         if SettingsPage.gui {
+            if SettingsPage.hidden {
+                SetTimer(SettingsPage.destroyFn, 0)
+                SettingsPage.hidden := false
+                SettingsPage.SendState()        ; пока окно было спрятано, могли смениться настройки и раскладки
+                SettingsPage.gui.Show()
+            }
             WinActivate(SettingsPage.gui)
             return
         }
@@ -94,11 +108,22 @@ class SettingsPage {
         wv.Navigate("https://" SettingsPage.host "/ui/settings.html")
     }
 
+    ; Крестик: сохранить и спрятать; уничтожится через keepMs, если не откроют снова
     static Close() {
-        if !SettingsPage.gui
+        if !SettingsPage.IsOpen()
             return
         SettingsPage.Save()
+        SettingsPage.hidden := true
+        SettingsPage.gui.Hide()
+        SetTimer(SettingsPage.destroyFn, -SettingsPage.keepMs)
+    }
+
+    static Destroy() {
+        if !SettingsPage.gui
+            return
+        SetTimer(SettingsPage.destroyFn, 0)
         g := SettingsPage.gui, wvc := SettingsPage.wvc
+        SettingsPage.hidden := false
         ; Сначала обнуляем ссылки: таймер или сообщение могли бы прийти в уничтожаемое окно
         SettingsPage.gui := SettingsPage.wvc := SettingsPage.wv := SettingsPage.onMessage := ""
         if wvc

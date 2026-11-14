@@ -77,7 +77,7 @@ class App {
         App.hasFlagFn := ObjBindMethod(App, "HasFlag")
         App.BuildTray()
         App.StartTimers()
-        Updater.Start(App, {changed: () => SettingsPage.SendState(), settingsOpen: () => !!SettingsPage.gui})
+        Updater.Start(App, {changed: () => SettingsPage.SendState(), settingsOpen: () => SettingsPage.IsOpen()})
         if HasArg("/settings")
             SettingsPage.Open(App)
     }
