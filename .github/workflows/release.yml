@@ -47,12 +47,15 @@ jobs:
           if ("v$v" -ne $env:GITHUB_REF_NAME) { throw "Тег $env:GITHUB_REF_NAME не совпадает с App.version $v" }
 
       - name: Сборка и подпись release.json
-        shell: powershell
+        # build.ps1 — Windows PowerShell 5.1 (CngKey); запускается файлом: в нём BOM, а встроенный
+        # скрипт без BOM PowerShell 5.1 читает в ANSI, поэтому здесь только латиница
+        shell: pwsh
         env:
           RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
         run: |
-          if (-not $env:RELEASE_SIGNING_KEY -and $env:GITHUB_REF -like 'refs/tags/*') { throw 'Нет секрета RELEASE_SIGNING_KEY' }
-          & .\build\build.ps1
+          if (-not $env:RELEASE_SIGNING_KEY -and $env:GITHUB_REF -like 'refs/tags/*') { throw 'No RELEASE_SIGNING_KEY secret' }
+          powershell -NoProfile -ExecutionPolicy Bypass -File build\build.ps1
+          if ($LASTEXITCODE -ne 0) { throw "build.ps1 failed ($LASTEXITCODE)" }
 
       - name: Черновик релиза
         if: startsWith(github.ref, 'refs/tags/')
