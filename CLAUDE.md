@@ -18,6 +18,8 @@ powershell -ExecutionPolicy Bypass -File build/build.ps1   # exe, портабе
 
 Сборка: Ahk2Exe скачивается в `build/.tools` (закреплён по SHA-256), Inno Setup 6 ищется в Program Files или `%LocalAppData%\Programs`. Версия — `App.version` и `;@Ahk2Exe-SetVersion`, сборка требует их совпадения. Установщик (`build/installer.iss`) закрывает индикатор ключом `/quit`, а не Restart Manager-ом (иначе значок-призрак), и при удалении снимает задачу автозапуска.
 
+Релиз: поднять `App.version` и `;@Ahk2Exe-SetVersion`, закоммитить, запушить тег `vX.Y.Z` (только по просьбе Василия). `.github/workflows/release.yml` прогоняет тесты, собирает, подписывает `release.json` секретом `RELEASE_SIGNING_KEY` и создаёт черновик релиза; Василий дописывает релиз-ноты и публикует. Ручной запуск workflow — проверочная сборка без релиза. Ключ подписи — ECDSA P-256: закрытый в `build/.keys/` (в `.gitignore`) и в секрете GitHub, открытый — `Release.publicKey`; новая пара — `build/keygen.ps1` (старые установки перестанут принимать обновления).
+
 Останавливать индикатор — штатно, как пункт «Выход» в трее (WM_COMMAND 65405 скрытому окну AHK). `Stop-Process`/`taskkill /F` оставляют в трее значок-призрак до наведения мыши.
 
 ```ahk

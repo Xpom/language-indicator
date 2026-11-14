@@ -7,6 +7,7 @@
 #Include ..\src\Settings.ahk
 #Include ..\src\Core.ahk
 #Include ..\src\Json.ahk
+#Include ..\src\Release.ahk
 
 global Tests := []
 Test(name, fn) => Tests.Push({name: name, fn: fn})
@@ -15,6 +16,13 @@ AssertEq(actual, expected, what := "") {
     a := Show(actual), e := Show(expected)
     if a != e
         throw Error((what ? what ": " : "") "ожидалось " e ", получено " a)
+}
+
+AssertThrows(fn) {
+    try fn()
+    catch
+        return
+    throw Error("ожидалось исключение")
 }
 
 Show(v) {
@@ -34,6 +42,7 @@ Print(s) => FileAppend(s "`n", "*", "UTF-8-RAW")
 #Include CoreTests.ahk
 #Include SettingsTests.ahk
 #Include JsonTests.ahk
+#Include ReleaseTests.ahk
 
 failed := 0
 for t in Tests {

@@ -1,0 +1,75 @@
+# Релиз: пуш тега vX.Y.Z собирает программу, подписывает release.json и создаёт ЧЕРНОВИК релиза.
+# Релиз-ноты дописываются и публикуются вручную на GitHub.
+# Запуск вручную (workflow_dispatch) — проверочная сборка без релиза, файлы в артефакте.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AutoHotkey v2 (закреплён по SHA-256)
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\ahk.zip"
+          Invoke-WebRequest https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.31/AutoHotkey_2.0.31.zip -OutFile $zip
+          if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne 'ca1a595aca4528755d8d4cd7fed23d497a37bd9a0b6892072612d68dee1bd00a') { throw 'AutoHotkey: контрольная сумма не совпала' }
+          Expand-Archive $zip "$env:RUNNER_TEMP\ahk"
+          "AHK_BASE=$env:RUNNER_TEMP\ahk\AutoHotkey64.exe" >> $env:GITHUB_ENV
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+
+      - name: Тесты
+        shell: pwsh
+        run: |
+          $out = & $env:AHK_BASE /ErrorStdOut tests\run.ahk | Out-String
+          $code = $LASTEXITCODE
+          Write-Host $out
+          if ($code -ne 0) { throw "Тесты не прошли (код $code)" }
+
+      - name: Тег совпадает с версией программы
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $v = [regex]::Match((Get-Content LanguageIndicator.ahk -Raw -Encoding UTF8), 'static version := "([^"]+)"').Groups[1].Value
+          if ("v$v" -ne $env:GITHUB_REF_NAME) { throw "Тег $env:GITHUB_REF_NAME не совпадает с App.version $v" }
+
+      - name: Сборка и подпись release.json
+        shell: powershell
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          if (-not $env:RELEASE_SIGNING_KEY -and $env:GITHUB_REF -like 'refs/tags/*') { throw 'Нет секрета RELEASE_SIGNING_KEY' }
+          & .\build\build.ps1
+
+      - name: Черновик релиза
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = $env:GITHUB_REF_NAME.TrimStart('v')
+          gh release create $env:GITHUB_REF_NAME --draft --generate-notes --title "Language Indicator $v" `
+            "dist\LanguageIndicator-Setup-$v.exe" "dist\LanguageIndicator-$v-portable.zip" dist\release.json dist\release.json.sig
+
+      - name: Артефакт проверочной сборки
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/release.json*

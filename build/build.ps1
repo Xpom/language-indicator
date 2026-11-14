@@ -68,4 +68,19 @@ Remove-Item (Join-Path $dist 'portable') -Recurse -Force
 & $iscc "/DAppVersion=$version" "/DSourceDir=$app" "/O$dist" (Join-Path $PSScriptRoot 'installer.iss') | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "ISCC завершился с кодом $LASTEXITCODE" }
 
+# --- описание релиза для обновления из программы: имена, размеры и суммы файлов ---
+function Describe($name) {
+    $f = Get-Item (Join-Path $dist $name)
+    [ordered]@{ name = $f.Name; size = $f.Length; sha256 = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower() }
+}
+$release = [ordered]@{
+    version = $version
+    files = [ordered]@{ setup = Describe "LanguageIndicator-Setup-$version.exe"; portable = Describe $zipName }
+}
+$releaseJson = Join-Path $dist 'release.json'
+[IO.File]::WriteAllText($releaseJson, ($release | ConvertTo-Json -Depth 4 -Compress), (New-Object Text.UTF8Encoding $false))
+# Подпись — только когда есть ключ (в GitHub Actions — секрет RELEASE_SIGNING_KEY)
+if ($env:RELEASE_SIGNING_KEY) { & (Join-Path $PSScriptRoot 'sign.ps1') -File $releaseJson }
+else { Write-Host 'RELEASE_SIGNING_KEY не задан — release.json не подписан' }
+
 Get-ChildItem $dist -File | ForEach-Object { Write-Host ("{0}  {1:N0} байт" -f $_.Name, $_.Length) }
