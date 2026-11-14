@@ -1,2 +1,4 @@
 .claude/settings.local.json
 settings.ini
+dist/
+build/.tools/

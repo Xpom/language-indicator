@@ -19,6 +19,7 @@
 ; Каждое изменение сразу применяется к app.settings и с короткой задержкой пишется в ini.
 
 #Include ..\lib\WebView2\WebView2.ahk
+#Include WebView2Runtime.ahk
 
 class SettingsPage {
     static Texts := {
@@ -60,7 +61,7 @@ class SettingsPage {
         g.Show(Format("w{} h{}", Round(360 * scale), Round(560 * scale)))
         SettingsPage.gui := g
         try {
-            wvc := WebView2.CreateControllerAsync(g.Hwnd, 0, A_AppData "\..\Local\LanguageIndicator\WebView2").await2()
+            wvc := WebView2.CreateControllerAsync(g.Hwnd, 0, A_AppData "\..\Local\LanguageIndicator\WebView2", , WebView2Runtime.CreateFn()).await2()
         } catch {
             SettingsPage.gui := ""
             g.Destroy()

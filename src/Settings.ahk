@@ -83,6 +83,12 @@ class SettingsFile {
         ["caret.sizeMax",       "Advanced", "caretSizeMax",   "num", 6, 64],
     ]
 
+    ; Где лежит settings.ini: у установленной программы — в профиле пользователя, чтобы настройки
+    ; пережили обновление и переустановку; у портабельной (рядом метка portable) и при запуске
+    ; из исходников — рядом с программой.
+    static PathFor(dir, compiled, portable, appData) =>
+        (!compiled || portable ? dir : appData "\LanguageIndicator") "\settings.ini"
+
     static Load(path) {
         s := DefaultSettings()
         if !FileExist(path)

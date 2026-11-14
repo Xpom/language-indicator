@@ -1,7 +1,12 @@
 ; Language Indicator — флажок текущей раскладки у каретки и у текстового курсора мыши.
 ; Ключи: /no-elevate — не поднимать права (для отладки), /settings — сразу открыть настройки,
-;        /devtools — инструменты разработчика в окне настроек.
+;        /quit — закрыть работающий индикатор, /devtools — инструменты разработчика в окне настроек.
 #Requires AutoHotkey v2.0
+;@Ahk2Exe-SetName Language Indicator
+;@Ahk2Exe-SetDescription Language Indicator
+;@Ahk2Exe-SetCompanyName Xpom
+;@Ahk2Exe-SetCopyright (c) 2026 Xpom (MIT)
+;@Ahk2Exe-SetVersion 0.1.0
 #SingleInstance Force
 Persistent
 
@@ -22,10 +27,15 @@ HasArg(name) {
     return false
 }
 
+; /quit — штатно закрыть работающий индикатор (им пользуется установщик): #SingleInstance Force
+; уже закрыл прежний экземпляр, без значка-призрака в трее, осталось выйти самому
+if HasArg("/quit")
+    ExitApp
+
 ; Без прав администратора UIPI не даёт читать каретку и раскладку в повышенных окнах.
 if !A_IsAdmin && !HasArg("/no-elevate") {
     try {
-        Run('*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"')
+        Run(A_IsCompiled ? '*RunAs "' A_ScriptFullPath '" /restart' : '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"')
         ExitApp
     }
     ; UAC отклонён — работаем без прав
@@ -37,9 +47,9 @@ DllCall("SetThreadDpiAwarenessContext", "ptr", -4, "ptr")
 App.Start()
 
 class App {
-    static version := "0.1.0"
+    static version := "0.1.0"          ; при смене — и ;@Ahk2Exe-SetVersion вверху (сборка сверяет)
     static settings := ""
-    static settingsPath := A_ScriptDir "\settings.ini"
+    static settingsPath := SettingsFile.PathFor(A_ScriptDir, A_IsCompiled, FileExist(A_ScriptDir "\portable"), A_AppData)
     static flagFiles := Map()
     static paused := false
     ; Общий снимок: каретку, раскладку и полноэкранность обновляет CaretTick, курсор — MouseTick
@@ -47,8 +57,11 @@ class App {
 
     static Start() {
         ; Файл настроек создаётся со значениями по умолчанию, чтобы его было что править руками
-        if !FileExist(App.settingsPath)
+        if !FileExist(App.settingsPath) {
+            SplitPath(App.settingsPath, , &dir)
+            DirCreate(dir)
             SettingsFile.Save(DefaultSettings(), App.settingsPath)
+        }
         App.settings := SettingsFile.Load(App.settingsPath)
         Gdip.Startup()
         OnExit((*) => Gdip.Shutdown())

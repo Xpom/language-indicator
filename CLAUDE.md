@@ -13,7 +13,10 @@ AutoHotkey v2 стоит в `C:\Program Files\AutoHotkey\v2`.
 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" LanguageIndicator.ahk /no-elevate   # без UAC, для отладки
 MSYS_NO_PATHCONV=1 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" LanguageIndicator.ahk /no-elevate /settings   # сразу открыть окно настроек (+ /devtools — инструменты разработчика)
 MSYS_NO_PATHCONV=1 "/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe" /ErrorStdOut tests/run.ahk | cat   # тесты, код выхода 0 = всё прошло
+powershell -ExecutionPolicy Bypass -File build/build.ps1   # exe, портабельный zip и установщик в dist/
 ```
+
+Сборка: Ahk2Exe скачивается в `build/.tools` (закреплён по SHA-256), Inno Setup 6 ищется в Program Files или `%LocalAppData%\Programs`. Версия — `App.version` и `;@Ahk2Exe-SetVersion`, сборка требует их совпадения. Установщик (`build/installer.iss`) закрывает индикатор ключом `/quit`, а не Restart Manager-ом (иначе значок-призрак), и при удалении снимает задачу автозапуска.
 
 Останавливать индикатор — штатно, как пункт «Выход» в трее (WM_COMMAND 65405 скрытому окну AHK). `Stop-Process`/`taskkill /F` оставляют в трее значок-призрак до наведения мыши.
 
@@ -35,10 +38,10 @@ PostMessage(0x111, 65405, 0, , "LanguageIndicator.ahk ahk_class AutoHotkey")
 ## Устройство
 
 - `src/Core.ahk` — ядро: чистая функция «снимок → размещения» (`Core.Decide`), маппинг раскладки, расчёт позиции. Системы не трогает, всё покрыто тестами.
-- `src/Settings.ahk` — значения по умолчанию и `settings.ini`; простые настройки описаны таблицей `SettingsFile.Fields` (чтение, запись и изменение из окна) рядом со скриптом (UTF-16, в `.gitignore`; создаётся при первом запуске). Негодные значения заменяются значениями по умолчанию; `[Layouts]` — переопределения флага и кода по полному HKL.
+- `src/Settings.ahk` — значения по умолчанию и `settings.ini` (где он лежит — `SettingsFile.PathFor`: у установленного exe в `%AppData%\LanguageIndicator`, у портабельного с меткой `portable` и из исходников — рядом); простые настройки описаны таблицей `SettingsFile.Fields` (чтение, запись и изменение из окна) рядом со скриптом (UTF-16, в `.gitignore`; создаётся при первом запуске). Негодные значения заменяются значениями по умолчанию; `[Layouts]` — переопределения флага и кода по полному HKL.
 - `src/Locale.ahk` — справочник локалей Windows (LANGID → страна/язык); детерминирован, используется в тестах.
 - `src/Probes.ahk` — адаптеры: раскладка активного окна, каретка, DPI монитора. Без логики решений.
-- `src/SettingsPage.ahk` + `ui/` — окно настроек: HTML-страница в WebView2 (`lib/WebView2`, thqby/ahk2_lib, MIT; `WebView2Loader.dll` из NuGet Microsoft.Web.WebView2). Страница шлёт строки `set<Tab>путь<Tab>значение`, AHK применяет через `SettingsFile.Set` и сразу пишет ini; AHK отдаёт состояние JSON-ом (`src/Json.ahk`). `ui/settings.html` открывается и в обычном браузере — на образце состояния, для вёрстки.
+- `src/SettingsPage.ahk` + `ui/` — окно настроек: HTML-страница в WebView2 (`lib/WebView2`, thqby/ahk2_lib, MIT; вместо закрытого `WebView2Loader.dll` — свой загрузчик `src/WebView2Runtime.ahk`: находит Runtime по реестру EdgeUpdate и вызывает его `CreateWebViewEnvironmentWithOptionsInternal`; обработчик оборачивается в объект с честным QueryInterface, иначе Runtime отвечает E_NOINTERFACE). Страница шлёт строки `set<Tab>путь<Tab>значение`, AHK применяет через `SettingsFile.Set` и сразу пишет ini; AHK отдаёт состояние JSON-ом (`src/Json.ahk`). `ui/settings.html` открывается и в обычном браузере — на образце состояния, для вёрстки.
 - `ui/settings.js` — вся страница: основная колонка плиток (каретка/мышь, флаг или код, предпросмотр, размер, отступ, автозапуск, непрозрачность, «О проекте») и правая панель «Дополнительно» (общие, флажок и код, раскладки с галереей флагов, каретка, мышь). Тексты — в словаре `T` (RU, EN; остальные языки показывают английский). Каждое изменение сразу уходит в AHK и пишется в ini, кнопок сохранения нет.
 - `src/Autostart.ahk` — задача Планировщика из XML (наивысшие права, без лимита времени); создаётся только из процесса администратора.
 - `src/Overlay.ahk`, `src/Gdip.ahk` — окно-слой с флажком (GDI+, попиксельная альфа). Код языка рисуется контуром букв и центрируется по границам контура, а не по строке шрифта.

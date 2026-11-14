@@ -152,3 +152,12 @@ Test("SetLayout: код обрезается до 4 знаков, | убирае
 Test("SetLayout: негодный флаг отброшен", (*) => AssertEq(LayoutAfter("../x", "RU"), "0: {}"))
 Test("SetLayout: оба пустые — переопределение снято", (*) => (s := DefaultSettings(), s.layouts[0x04190419] := {flag: "gb", text: ""},
     SettingsFile.SetLayout(s, 0x04190419, "", ""), AssertEq(s.layouts.Count, 0)))
+
+; --- где лежит settings.ini ---
+
+Test("Путь: из исходников — рядом со скриптом",
+    (*) => AssertEq(SettingsFile.PathFor("D:\src", false, false, "C:\AD"), "D:\src\settings.ini"))
+Test("Путь: установленная программа — в профиле",
+    (*) => AssertEq(SettingsFile.PathFor("C:\PF\LI", true, false, "C:\AD"), "C:\AD\LanguageIndicator\settings.ini"))
+Test("Путь: портабельная — рядом с программой",
+    (*) => AssertEq(SettingsFile.PathFor("E:\LI", true, true, "C:\AD"), "E:\LI\settings.ini"))
