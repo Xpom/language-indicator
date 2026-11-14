@@ -33,15 +33,14 @@ Guid(s) {
 }
 
 class CaretProbe {
-    ; Каретка активного окна цепочкой Win32 → MSAA → UIA: {x, y, w, h} на экране или "".
-    ; methods — {win32, msaa, uia}: какие способы включены.
+    ; Каретка активного окна цепочкой Win32 → MSAA → UIA: {x, y, w, h, method} на экране или "".
+    ; methods — {win32, msaa, uia}: какие способы включены; method — каким нашлась.
     static Find(methods) {
-        if methods.win32 && IsObject(c := CaretProbe.Win32())
-            return c
-        if methods.msaa && IsObject(c := CaretProbe.Msaa())
-            return c
-        if methods.uia && IsObject(c := CaretProbe.Uia())
-            return c
+        for name in ["win32", "msaa", "uia"]
+            if methods.%name% && IsObject(c := CaretProbe.%name%()) {
+                c.method := name
+                return c
+            }
         return ""
     }
 

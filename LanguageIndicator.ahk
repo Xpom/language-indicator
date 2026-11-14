@@ -1,6 +1,7 @@
 ; Language Indicator — флажок текущей раскладки у каретки и у текстового курсора мыши.
 ; Ключи: /no-elevate — не поднимать права (для отладки), /settings — сразу открыть настройки,
-;        /quit — закрыть работающий индикатор, /devtools — инструменты разработчика в окне настроек.
+;        /quit — закрыть работающий индикатор, /devtools — инструменты разработчика в окне настроек,
+;        /trace <файл> — писать в файл, что увидел индикатор (src/Trace.ahk).
 #Requires AutoHotkey v2.0
 ;@Ahk2Exe-SetName Language Indicator
 ;@Ahk2Exe-SetDescription Language Indicator
@@ -22,12 +23,21 @@ Persistent
 #Include src\Http.ahk
 #Include src\Updater.ahk
 #Include src\SettingsPage.ahk
+#Include src\Trace.ahk
 
 HasArg(name) {
     for a in A_Args
         if a = name
             return true
     return false
+}
+
+; Значение после ключа: /trace <файл> → файл; нет ключа или значения — ""
+ArgValue(name) {
+    for i, a in A_Args
+        if a = name && i < A_Args.Length
+            return A_Args[i + 1]
+    return ""
 }
 
 ; /quit — штатно закрыть работающий индикатор (им пользуется установщик): #SingleInstance Force
@@ -38,7 +48,10 @@ if HasArg("/quit")
 ; Без прав администратора UIPI не даёт читать каретку и раскладку в повышенных окнах.
 if !A_IsAdmin && !HasArg("/no-elevate") {
     try {
-        Run(A_IsCompiled ? '*RunAs "' A_ScriptFullPath '" /restart' : '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"')
+        args := ""     ; ключи запуска переходят в процесс с правами (/settings, /trace <файл>)
+        for a in A_Args
+            args .= ' "' a '"'
+        Run(A_IsCompiled ? '*RunAs "' A_ScriptFullPath '" /restart' args : '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"' args)
         ExitApp
     }
     ; UAC отклонён — работаем без прав
@@ -66,6 +79,7 @@ class App {
             SettingsFile.Save(DefaultSettings(), App.settingsPath)
         }
         App.settings := SettingsFile.Load(App.settingsPath)
+        Trace.path := ArgValue("/trace")
         Gdip.Startup()
         OnExit((*) => Gdip.Shutdown())
         App.caretOverlay := FlagOverlay(A_ScriptDir "\flags")
@@ -115,6 +129,9 @@ class App {
         result := Core.Decide(App.snap, App.settings, App.hasFlagFn)
         App.caretOverlay.Update(result.caret)
         App.mouseOverlay.Update(result.mouse)
+        if Trace.path != ""
+            Trace.Write(Trace.Record(Trace.Window(), App.snap,
+                Core.MapLayout(App.snap.hkl, App.hasFlagFn, App.settings.layouts), result))
     }
 
     static BuildTray() {

@@ -2,6 +2,9 @@
 ; Parse — описание релиза и ответ GitHub API для проверки обновлений.
 
 class Json {
+    ; Значения, которых нет в AHK: Stringify пишет их как null, true и false
+    static JNull := {}, JTrue := {}, JFalse := {}
+
     ; Объект → Map, массив → Array, true/false → 1/0, null → "". Негодный JSON — исключение.
     static Parse(text) {
         pos := 1
@@ -94,6 +97,8 @@ class Json {
     }
     ; Объект, Map, массив, строка, число. true/false в AHK — числа 1/0, страница сама приводит их к булевым.
     static Stringify(v) {
+        if IsObject(v) && (v == Json.JNull || v == Json.JTrue || v == Json.JFalse)
+            return v == Json.JNull ? "null" : v == Json.JTrue ? "true" : "false"
         if v is Array {
             out := ""
             for item in v
