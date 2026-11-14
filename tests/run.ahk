@@ -8,6 +8,8 @@
 #Include ..\src\Core.ahk
 #Include ..\src\Json.ahk
 #Include ..\src\Release.ahk
+#Include ..\src\Http.ahk
+#Include ..\src\Updater.ahk
 
 global Tests := []
 Test(name, fn) => Tests.Push({name: name, fn: fn})
@@ -43,6 +45,7 @@ Print(s) => FileAppend(s "`n", "*", "UTF-8-RAW")
 #Include SettingsTests.ahk
 #Include JsonTests.ahk
 #Include ReleaseTests.ahk
+#Include UpdaterTests.ahk
 
 failed := 0
 for t in Tests {

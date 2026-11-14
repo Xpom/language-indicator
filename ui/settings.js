@@ -7,7 +7,7 @@ const host = window.chrome && window.chrome.webview;
 const DEMO = {
   type: "state", autostart: 1, layout: { flag: "ru", text: "RU" },
   settings: {
-    opacity: 85, hideFullscreen: 1, pollMs: 50, mousePollMs: 15, cornerRadius: 2, uiLang: "auto",
+    opacity: 85, hideFullscreen: 1, pollMs: 50, mousePollMs: 15, cornerRadius: 2, uiLang: "auto", autoUpdate: 1,
     code: { bg: "#3c4043", font: "Segoe UI", scale: 62 },
     caret: { enabled: 1, show: "flag", side: "bottom", gap: 3, size: 12, methods: { win32: 1, msaa: 1, uia: 1 }, sizeMode: "fixed", sizeRatio: 70, sizeMin: 8, sizeMax: 32 },
     mouse: { enabled: 1, show: "flag", side: "bottom-right", gap: 3, size: 12 },
@@ -19,13 +19,14 @@ const DEMO = {
   ],
   flags: ["by", "de", "eu", "fr", "gb", "gb-eng", "kz", "ru", "ua", "us"],
   systemLang: "ru",
+  update: { status: "available", version: "0.2.0", error: "", portable: false },
   about: { version: "0.1.0", links: { site: "", github: "https://github.com/Xpom/language-indicator", youtube: "", coffee: "" } },
 };
 
 // Тексты окна по языкам. Переведены русский и английский; остальные языки показывают английский
 const T = {
   ru: {
-    title: "Индикатор раскладки", sample: "Привет", site: "Сайт", guide: "Инструкция", coffee: "Кофе", soon: "Скоро", more: "Дополнительно", minimize: "Свернуть", close: "Закрыть",
+    title: "Индикатор раскладки", sample: "Привет", site: "Сайт", guide: "Инструкция", coffee: "Кофе", soon: "Скоро", autoUpd: "Автообновление", updCurrent: "Последняя версия", updChecking: "Проверяю…", updAvailable: "Доступна v{}", updDownloading: "Скачиваю v{}…", updInstalling: "Устанавливаю v{}…", updError: "Не удалось обновиться", updNow: "Обновить", updNotes: "Что нового", updCheck: "Проверить", updPortable: "Скачайте новую версию на GitHub", more: "Дополнительно", minimize: "Свернуть", close: "Закрыть",
     caret: "Каретка", mouse: "Мышь", shown: "Показывать", hidden: "Скрыто",
     gap: "Отступ", auto: "Автозапуск", autoOn: "С Windows", autoOff: "Выключен", opacity: "Непрозрачность",
     showFlag: "Показывать флаг", showCode: "Показывать код языка",
@@ -37,7 +38,7 @@ const T = {
     sides: { "top-left": "Сверху слева", top: "Сверху", "top-right": "Сверху справа", left: "Слева", right: "Справа", "bottom-left": "Снизу слева", bottom: "Снизу", "bottom-right": "Снизу справа" },
   },
   en: {
-    title: "Language Indicator", sample: "Hello", site: "Website", guide: "Guide", coffee: "Coffee", soon: "Coming soon", more: "Advanced", minimize: "Minimize", close: "Close",
+    title: "Language Indicator", sample: "Hello", site: "Website", guide: "Guide", coffee: "Coffee", soon: "Coming soon", autoUpd: "Auto-update", updCurrent: "Up to date", updChecking: "Checking…", updAvailable: "v{} is available", updDownloading: "Downloading v{}…", updInstalling: "Installing v{}…", updError: "Update failed", updNow: "Update", updNotes: "What's new", updCheck: "Check", updPortable: "Download the new version on GitHub", more: "Advanced", minimize: "Minimize", close: "Close",
     caret: "Caret", mouse: "Mouse", shown: "Shown", hidden: "Hidden",
     gap: "Gap", auto: "Autostart", autoOn: "With Windows", autoOff: "Off", opacity: "Opacity",
     showFlag: "Show the flag", showCode: "Show the language code",
@@ -208,11 +209,33 @@ function About() {
       ${a("youtube", `<svg viewBox="0 0 24 24"><rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#ff0033"/><path d="M10 9v6l5.2-3z" fill="#fff"/></svg>`, t("guide"))}
       ${a("coffee", `<span class="ico">${G.coffee}</span>`, t("coffee"), "coffee")}
     </div>
+    ${UpdateRow()}
     <div class="copy"><span>© 2026 Xpom</span><span>v${state.about.version}</span></div>
   </div>`;
 }
 
+// Обновления: галочка «Автообновление», состояние и кнопки. Ставит и проверяет AHK (Updater)
+function UpdateRow() {
+  const u = state.update || { status: "idle" }, v = s => t(s).replace("{}", u.version);
+  const text = { checking: t("updChecking"), current: t("updCurrent"), available: v("updAvailable"),
+    downloading: v("updDownloading"), installing: v("updInstalling"), error: t("updError") }[u.status] || "";
+  const btn = (act, label, cls = "") => `<button class="upd-btn ${cls}" data-upd="${act}">${label}</button>`;
+  let actions = "";
+  if (u.status === "available" || (u.status === "error" && u.version)) {
+    actions = btn("notes", t("updNotes")) + (u.portable ? "" : btn("now", t("updNow"), "primary"));
+  } else if (!/^(checking|downloading|installing)$/.test(u.status)) {
+    actions = btn("check", t("updCheck"));
+  }
+  return `<div class="upd">
+    <label class="upd-auto"><input type="checkbox" id="autoUpd" ${state.settings.autoUpdate ? "checked" : ""}>${t("autoUpd")}</label>
+    <div class="upd-line"><span class="upd-text ${u.status}">${text}${u.portable && u.status === "available" ? ` · ${t("updPortable")}` : ""}</span>${actions}</div>
+  </div>`;
+}
+
 function bindMain(app) {
+  const au = app.querySelector("#autoUpd");
+  if (au) au.onchange = () => set("autoUpdate", au.checked ? 1 : 0);
+  app.querySelectorAll("[data-upd]").forEach(el => el.onclick = () => send("update-" + el.dataset.upd));
   app.querySelectorAll("[data-link]").forEach(el => el.onclick = () => { if (state.about.links[el.dataset.link]) send("open", el.dataset.link); });
   app.querySelectorAll("[data-chk]").forEach(el => el.onclick = () => set(el.dataset.chk + ".enabled", !get(el.dataset.chk + ".enabled")));
   app.querySelectorAll("[data-show] [data-v]").forEach(el => el.onclick = () => set(el.parentNode.dataset.show + ".show", el.dataset.v));

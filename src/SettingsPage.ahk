@@ -8,6 +8,7 @@
 ;   layout <HKL hex> <флаг> <код> — переопределить раскладку; оба пустые — как обычно
 ;   size <w> <h>         — размер содержимого в CSS-пикселях, окно подстраивается
 ;   open <ссылка>        — открыть ссылку из Links во внешнем браузере
+;   update-now | update-check | update-notes — поставить найденное обновление, проверить, открыть «Что нового»
 ;   min | close          — кнопки заголовка
 ; AHK -> странице: JSON {type: "state", settings, autostart,
 ;   layout: {flag, text}                  — текущая раскладка, для предпросмотра
@@ -15,7 +16,8 @@
 ;                                           переопределения, flag и text — переопределение
 ;   flags: [код],                         — все картинки в flags
 ;   systemLang: "ru",                     — язык интерфейса Windows (для uiLang = auto)
-;   about: {version, links: {имя: адрес}}} — для плитки «О проекте»; пустой адрес — ссылки пока нет
+;   about: {version, links: {имя: адрес}}, — для плитки «О проекте»; пустой адрес — ссылки пока нет
+;   update: {status, version, error, portable}} — обновления (см. Updater.state)
 ; Каждое изменение сразу применяется к app.settings и с короткой задержкой пишется в ini.
 
 #Include ..\lib\WebView2\WebView2.ahk
@@ -131,6 +133,13 @@ class SettingsPage {
             case "open":
                 if parts.Length >= 2 && SettingsPage.Links.Has(parts[2]) && SettingsPage.Links[parts[2]] != ""
                     Run(SettingsPage.Links[parts[2]])
+            case "update-now":
+                Updater.Install()
+            case "update-check":
+                Updater.Check()
+            case "update-notes":
+                if Updater.state.notesUrl ~= "^https://"
+                    Run(Updater.state.notesUrl)
             case "size":
                 SettingsPage.Resize(parts[2], parts[3])
             case "min":
@@ -162,6 +171,8 @@ class SettingsPage {
             layouts: layouts,
             flags: flags,
             about: {version: app.version, links: SettingsPage.Links},
+            update: {status: Updater.state.status, version: Updater.state.version, error: Updater.state.error,
+                portable: Updater.Portable()},
             systemLang: StrLower(Locale.Language(Locale.NameFromLangId(DllCall("GetUserDefaultUILanguage", "ushort")))),
         }))
     }

@@ -161,3 +161,16 @@ Test("Путь: установленная программа — в профи�
     (*) => AssertEq(SettingsFile.PathFor("C:\PF\LI", true, false, "C:\AD"), "C:\AD\LanguageIndicator\settings.ini"))
 Test("Путь: портабельная — рядом с программой",
     (*) => AssertEq(SettingsFile.PathFor("E:\LI", true, true, "C:\AD"), "E:\LI\settings.ini"))
+
+; --- настройки обновлений ---
+
+Test("Set: автообновление", (*) => AssertEq(SetAndShow("autoUpdate", "0"), "1: 0"))
+Test("Set: служебные значения обновлений окну не меняются",
+    (*) => AssertEq(SettingsFile.Set(DefaultSettings(), "update.feed", "https://example.com/x"), 0))
+Test("ini: служебные значения обновлений читаются и проверяются", (*) => AssertEq(SettingsFile.Load(TempIni("
+(
+[Update]
+notifiedVersion=0.2.0
+lastRunVersion=bad
+feed=http://127.0.0.1:8765/latest.json
+)")).update, {notifiedVersion: "0.2.0", lastRunVersion: "", feed: "http://127.0.0.1:8765/latest.json"}))

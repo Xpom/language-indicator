@@ -11,6 +11,12 @@ DefaultSettings() {
             scale: 62,      ; кегль, % высоты плашки
         },
         hideFullscreen: true,   ; прятать флажки на мониторе полноэкранного окна
+        autoUpdate: true,   ; ставить обновления самому; выключено — только сообщать
+        update: {           ; служебное для обновлений, в окне не показывается
+            notifiedVersion: "",    ; о какой версии уже сообщили в трее
+            lastRunVersion: "",     ; версия при прошлом запуске: выросла — показать «Обновлено до»
+            feed: "",               ; адрес вместо GitHub API — для проверки на тестовом источнике
+        },
         pollMs: 50,         ; опрос каретки и раскладки
         mousePollMs: 15,    ; опрос курсора: флажок у мыши должен поспевать за ней
         caret: {
@@ -37,12 +43,13 @@ DefaultSettings() {
 }
 
 ; settings.ini (UTF-16, чтобы годились любые символы в кодах):
-;   [General]  opacity, hideFullscreen, cornerRadius, uiLang
+;   [General]  opacity, hideFullscreen, cornerRadius, uiLang, autoUpdate
 ;   [Code]     bg, font, scale
 ;   [Caret]    enabled, show, side, gap, size
 ;   [Mouse]    enabled, show, side, gap, size
 ;   [Advanced] pollMs, mousePollMs, caretWin32, caretMsaa, caretUia,
 ;              caretSizeMode, caretSizeRatio, caretSizeMin, caretSizeMax
+;   [Update]   notifiedVersion, lastRunVersion, feed
 ;   [Layouts]  04090409=gb|EN — полный HKL в hex = флаг|код
 ; Отсутствующее или негодное значение заменяется значением по умолчанию.
 class SettingsFile {
@@ -53,12 +60,17 @@ class SettingsFile {
     ; Все простые настройки: путь в объекте настроек, секция и ключ ini, вид значения.
     ; По этой таблице настройки читаются из ini, пишутся в него и меняются из окна настроек.
     ; Виды: num — целое в пределах [lo, hi]; bool; side — сторона из sides; enum — одно из слов lo;
-    ;       color — #rrggbb или none; font — имя шрифта (латиница, цифры, пробел, - и _).
+    ;       color — #rrggbb или none; font — имя шрифта (латиница, цифры, пробел, - и _);
+    ;       version — X.Y.Z; url — http(s)-адрес.
     static Fields := [
         ["opacity",             "General",  "opacity",        "num", 10, 100],
         ["hideFullscreen",      "General",  "hideFullscreen", "bool"],
         ["cornerRadius",        "General",  "cornerRadius",   "num", 0, 6],
         ["uiLang",              "General",  "uiLang",         "enum", SettingsFile.uiLangs],
+        ["autoUpdate",          "General",  "autoUpdate",     "bool"],
+        ["update.notifiedVersion", "Update", "notifiedVersion", "version"],
+        ["update.lastRunVersion",  "Update", "lastRunVersion",  "version"],
+        ["update.feed",            "Update", "feed",            "url"],
         ["code.bg",             "Code",     "bg",             "color"],
         ["code.font",           "Code",     "font",           "font"],
         ["code.scale",          "Code",     "scale",          "num", 40, 90],
@@ -118,6 +130,8 @@ class SettingsFile {
     ; Меняет одну настройку по пути из Fields (так её меняет окно настроек).
     ; value — строка или число; true — значение годное и записано, false — отброшено.
     static Set(s, key, value) {
+        if SubStr(key, 1, 7) = "update."    ; служебные значения окну не меняются
+            return false
         for f in SettingsFile.Fields {
             if f[1] != key
                 continue
@@ -160,6 +174,10 @@ class SettingsFile {
                 return v = "none" || v ~= "^#[0-9a-f]{6}$" ? v : ""
             case "font":
                 return v ~= "^[A-Za-z0-9 _-]{1,40}$" ? v : ""
+            case "version":
+                return v ~= "^\d+\.\d+\.\d+$" ? v : ""
+            case "url":
+                return v ~= "^https?://\S+$" ? v : ""
             case "side", "enum":
                 for w in (f[4] = "side" ? SettingsFile.sides : f[5])
                     if v = w

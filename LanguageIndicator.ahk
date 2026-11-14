@@ -18,6 +18,9 @@ Persistent
 #Include src\Overlay.ahk
 #Include src\Autostart.ahk
 #Include src\Json.ahk
+#Include src\Release.ahk
+#Include src\Http.ahk
+#Include src\Updater.ahk
 #Include src\SettingsPage.ahk
 
 HasArg(name) {
@@ -74,6 +77,7 @@ class App {
         App.hasFlagFn := ObjBindMethod(App, "HasFlag")
         App.BuildTray()
         App.StartTimers()
+        Updater.Start(App, {changed: () => SettingsPage.SendState(), settingsOpen: () => !!SettingsPage.gui})
         if HasArg("/settings")
             SettingsPage.Open(App)
     }
