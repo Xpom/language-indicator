@@ -1,13 +1,15 @@
 ; Асинхронный HTTP GET без блокировки потока: таймеры флажков продолжают работать, пока идёт запрос.
-; MSXML2.XMLHTTP — это WinINet: системный прокси и перенаправления (ассеты GitHub) работают сами.
+; ServerXMLHTTP (WinHTTP), а не XMLHTTP (WinINet): ассеты релиза GitHub перенаправляет на другой домен
+; (release-assets.githubusercontent.com), и XMLHTTP такой переход запрещает — Access is denied.
 class Http {
     ; done(ok, status, body) вызывается один раз; body — Buffer с телом ответа (при ошибке пустой)
     static Get(url, done, timeoutMs := 60000) {
         body := Buffer(0)
         try {
-            req := ComObject("MSXML2.XMLHTTP.6.0")
+            req := ComObject("MSXML2.ServerXMLHTTP.6.0")
             req.open("GET", url, true)
             req.setRequestHeader("Cache-Control", "no-cache")
+            req.setRequestHeader("User-Agent", "LanguageIndicator")    ; без него GitHub API отвечает 403
             req.setRequestHeader("Accept", "application/vnd.github+json, */*")
             req.send()
         } catch {
